@@ -85,4 +85,16 @@ describe('weighted pool', () => {
             expect(maxSwapAmount).to.eq(900000000000000000n);
         });
     });
+    describe('getMaxSingleTokenRemoveAmount', () => {
+        test('exact in, BPT scaling factor is 1', () => {
+            const maxRemoveAmount = pool.getMaxSingleTokenRemoveAmount({
+                isExactIn: true,
+                totalSupply: 100000000000000000000n,
+                tokenOutBalance: 40000000000000000000n,
+                tokenOutScalingFactor: 1n,
+                tokenOutRate: 1000000000000000000n,
+            });
+            expect(maxRemoveAmount).to.eq(30000000000000000000n);
+        });
+    });
 });
