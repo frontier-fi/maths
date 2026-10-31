@@ -1,15 +1,14 @@
 {
     "name": "@balancer-labs/balancer-maths",
-    "description": "Balancer V3 Maths",
+    "description": "Frontier Finance Maths",
     "license": "MIT",
     "repository": {
         "type": "git",
-        "url": "https://github.com/balancer/balancer-maths"
+        "url": "https://github.com/frontier-fi/maths",
+        "directory": "typescript"
     },
-    "publishConfig": {
-        "access": "public"
-    },
-    "version": "0.0.41",
+    "private": true,
+    "version": "0.0.42",
     "main": "dist/index.js",
     "module": "dist/index.mjs",
     "types": "dist/index.d.ts",
@@ -26,7 +25,8 @@
         "test": "vitest dev",
         "test:ci": "vitest run",
         "changeset": "changeset",
-        "changeset:release": "pnpm build && changeset publish"
+        "changeset:release": "pnpm build && changeset publish",
+        "release:pack": "rm -f *.tgz && pnpm build && pnpm pack && mv balancer-labs-balancer-maths-*.tgz frontier-maths.tgz"
     },
     "devDependencies": {
         "@changesets/cli": "^2.28.1",

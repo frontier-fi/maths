@@ -135,4 +135,18 @@ describe('stable pool', () => {
             expect(amountOut).toEqual(99499505472260433154n);
         });
     });
+    describe('getMaxSingleTokenRemoveAmount', () => {
+        test('exact in, BPT scaling factor is 1', () => {
+            const maxRemoveAmount = pool.getMaxSingleTokenRemoveAmount({
+                isExactIn: true,
+                totalSupply: 100000000000000000000n,
+                tokenOutBalance: 40000000000000000000n,
+                tokenOutScalingFactor: 1n,
+                tokenOutRate: 1000000000000000000n,
+            });
+            expect(maxRemoveAmount).to.eq(
+                340282366920938463363374607431768211456n,
+            );
+        });
+    });
 });
