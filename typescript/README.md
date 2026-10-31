@@ -1,6 +1,20 @@
-# Balancer Maths TS
+# Frontier Finance Maths
 
-Typescript implementation of maths for Balancer pools. Also published as a [package on NPM](https://www.npmjs.com/package/@balancer-labs/balancer-maths).
+Typescript implementation of maths for Balancer V3 pools, forked from [balancer-maths](https://github.com/balancer/balancer-maths).
+
+## Installation
+
+This package is not published to NPM. It is distributed as a tarball on [GitHub releases](https://github.com/frontier-fi/maths/releases) under the same package name, so it can replace the upstream package in place:
+
+```json
+"@balancer-labs/balancer-maths": "https://github.com/frontier-fi/maths/releases/download/v0.0.42/frontier-maths.tgz"
+```
+
+To build the tarball (`frontier-maths.tgz`) for a release:
+
+```bash
+pnpm release:pack
+```
 
 ## Hooks Support
 
