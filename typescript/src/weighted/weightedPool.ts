@@ -93,7 +93,7 @@ export class Weighted implements PoolBase {
             swapKind: isExactIn ? SwapKind.GivenIn : SwapKind.GivenOut,
             balancesLiveScaled18: [totalSupply, tokenOutBalance],
             tokenRates: [1000000000000000000n, tokenOutRate],
-            scalingFactors: [1000000000000000000n, tokenOutScalingFactor],
+            scalingFactors: [1n, tokenOutScalingFactor],
             indexIn: 0,
             indexOut: 1,
         });
