@@ -155,8 +155,15 @@ pub fn compute_balance_out_given_invariant(
     invariant_ratio: &U256,
 ) -> Result<U256, PoolError> {
     // Rounds result up overall.
+    // Round up the exponent when the invariant ratio is above one (increasing the balance ratio), and
+    // round it down otherwise (the base is below one, so a smaller exponent increases the balance ratio).
+    let exponent = if *invariant_ratio > WAD {
+        div_up_fixed(&WAD, weight)?
+    } else {
+        div_down_fixed(&WAD, weight)?
+    };
     // Calculate by how much the token balance has to increase to match the invariantRatio.
-    let balance_ratio = pow_up_fixed(invariant_ratio, &div_up_fixed(&WAD, weight)?)?;
+    let balance_ratio = pow_up_fixed(invariant_ratio, &exponent)?;
 
     mul_up_fixed(current_balance, &balance_ratio)
 }

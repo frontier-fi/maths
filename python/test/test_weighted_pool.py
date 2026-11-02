@@ -1,11 +1,19 @@
 import pytest
 
-from src.common.maths import Rounding
+from src.common.constants import WAD
+from src.common.maths import (
+    Rounding,
+    div_down_fixed,
+    div_up_fixed,
+    mul_up_fixed,
+    pow_up_fixed,
+)
 from src.common.swap_params import SwapParams
 from src.common.types import SwapKind
 from src.pools.weighted.weighted import Weighted
 from src.pools.weighted.weighted_data import WeightedState
 from src.pools.weighted.weighted_math import (
+    compute_balance_out_given_invariant,
     compute_in_given_exact_out,
     compute_out_given_exact_in,
 )
@@ -127,3 +135,52 @@ def test_no_revert_above_min_nor_for_version_1_pools():
     pool.compute_balance(MIN_BALANCES, 1, 9 * 10**17)
     v1 = make_pool(MIN_WEIGHTS, pool_version=1, min_token_balances=HIGH_MIN_OUT)
     v1.on_swap(EXACT_IN)
+
+
+# v3 WeightedMath.computeBalanceOutGivenInvariant rounds the `1 / weight` exponent up when the
+# invariant ratio is above one and down otherwise, so the new balance always favours the pool.
+BALANCE_GIVEN_INVARIANT_BALANCE = 10**24
+BALANCE_GIVEN_INVARIANT_WEIGHT = 3 * 10**17
+
+
+def test_compute_balance_out_given_invariant_ratio_below_one_rounds_exponent_down():
+    invariant_ratio = 739595000000000005
+    expected = mul_up_fixed(
+        BALANCE_GIVEN_INVARIANT_BALANCE,
+        pow_up_fixed(
+            invariant_ratio, div_down_fixed(WAD, BALANCE_GIVEN_INVARIANT_WEIGHT)
+        ),
+    )
+    exponent_rounded_up = mul_up_fixed(
+        BALANCE_GIVEN_INVARIANT_BALANCE,
+        pow_up_fixed(
+            invariant_ratio, div_up_fixed(WAD, BALANCE_GIVEN_INVARIANT_WEIGHT)
+        ),
+    )
+    assert expected != exponent_rounded_up
+    assert (
+        compute_balance_out_given_invariant(
+            BALANCE_GIVEN_INVARIANT_BALANCE,
+            BALANCE_GIVEN_INVARIANT_WEIGHT,
+            invariant_ratio,
+        )
+        == expected
+    )
+
+
+def test_compute_balance_out_given_invariant_ratio_above_one_rounds_exponent_up():
+    invariant_ratio = 11 * 10**17
+    expected = mul_up_fixed(
+        BALANCE_GIVEN_INVARIANT_BALANCE,
+        pow_up_fixed(
+            invariant_ratio, div_up_fixed(WAD, BALANCE_GIVEN_INVARIANT_WEIGHT)
+        ),
+    )
+    assert (
+        compute_balance_out_given_invariant(
+            BALANCE_GIVEN_INVARIANT_BALANCE,
+            BALANCE_GIVEN_INVARIANT_WEIGHT,
+            invariant_ratio,
+        )
+        == expected
+    )

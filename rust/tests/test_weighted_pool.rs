@@ -1,9 +1,13 @@
 //! WeightedPool parity with the deployed WeightedPool v2 (20261021-weighted-pool).
 
 use alloy_primitives::U256;
+use balancer_maths_rust::common::constants::WAD;
+use balancer_maths_rust::common::maths::{
+    div_down_fixed, div_up_fixed, mul_up_fixed, pow_up_fixed,
+};
 use balancer_maths_rust::common::types::{BasePoolState, Rounding, SwapKind, SwapParams};
 use balancer_maths_rust::pools::weighted::weighted_math::{
-    compute_in_given_exact_out, compute_out_given_exact_in,
+    compute_balance_out_given_invariant, compute_in_given_exact_out, compute_out_given_exact_in,
 };
 use balancer_maths_rust::pools::weighted::{WeightedPool, WeightedState};
 use balancer_maths_rust::{PoolBase, PoolError};
@@ -205,4 +209,44 @@ fn no_revert_above_min_nor_for_version_1_pools() {
         .is_ok());
     let v1 = pool_with_min_balances(high_min_out(), Some(1));
     assert!(v1.on_swap(&min_balance_exact_in()).is_ok());
+}
+
+// v3 WeightedMath.computeBalanceOutGivenInvariant rounds the `1 / weight` exponent up when the
+// invariant ratio is above one and down otherwise, so the new balance always favours the pool.
+#[test]
+fn compute_balance_out_given_invariant_ratio_below_one_rounds_exponent_down() {
+    let balance = U256::from(1_000_000_000_000_000_000_000_000u128);
+    let weight = U256::from(300_000_000_000_000_000u64);
+    let invariant_ratio = U256::from(739_595_000_000_000_005u64);
+    let expected = mul_up_fixed(
+        &balance,
+        &pow_up_fixed(&invariant_ratio, &div_down_fixed(&WAD, &weight).unwrap()).unwrap(),
+    )
+    .unwrap();
+    let exponent_rounded_up = mul_up_fixed(
+        &balance,
+        &pow_up_fixed(&invariant_ratio, &div_up_fixed(&WAD, &weight).unwrap()).unwrap(),
+    )
+    .unwrap();
+    assert_ne!(expected, exponent_rounded_up);
+    assert_eq!(
+        compute_balance_out_given_invariant(&balance, &weight, &invariant_ratio).unwrap(),
+        expected
+    );
+}
+
+#[test]
+fn compute_balance_out_given_invariant_ratio_above_one_rounds_exponent_up() {
+    let balance = U256::from(1_000_000_000_000_000_000_000_000u128);
+    let weight = U256::from(300_000_000_000_000_000u64);
+    let invariant_ratio = U256::from(1_100_000_000_000_000_000u64);
+    let expected = mul_up_fixed(
+        &balance,
+        &pow_up_fixed(&invariant_ratio, &div_up_fixed(&WAD, &weight).unwrap()).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        compute_balance_out_given_invariant(&balance, &weight, &invariant_ratio).unwrap(),
+        expected
+    );
 }
