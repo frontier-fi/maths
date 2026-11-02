@@ -7,7 +7,8 @@ use crate::pools::buffer::buffer_math::calculate_buffer_amounts;
 use crate::pools::buffer::enums::WrappingDirection;
 use alloy_primitives::{uint, U256};
 
-pub const _MINIMUM_WRAP_AMOUNT: U256 = uint!(1000_U256);
+/// minWrapAmount of the frontier Vault (20261016-vault)
+pub const _MINIMUM_WRAP_AMOUNT: U256 = uint!(10000_U256);
 
 /// ERC4626 Buffer wrap or unwrap function
 ///
@@ -36,14 +37,21 @@ pub fn erc4626_buffer_wrap_or_unwrap(
             WrappingDirection::Wrap
         };
 
-    calculate_buffer_amounts(
+    let amount_calculated_raw = calculate_buffer_amounts(
         wrapping_direction,
         swap_input.swap_kind.clone(),
         &swap_input.amount_raw,
         &pool_state.mutable.rate,
         pool_state.mutable.max_deposit.as_ref(),
         pool_state.mutable.max_mint.as_ref(),
-    )
+    )?;
+
+    // The Vault also checks the calculated amount against the minimum
+    if amount_calculated_raw < _MINIMUM_WRAP_AMOUNT {
+        return Err(PoolError::BufferWrapAmountTooSmall);
+    }
+
+    Ok(amount_calculated_raw)
 }
 
 /// Check if two addresses are the same (case-insensitive)

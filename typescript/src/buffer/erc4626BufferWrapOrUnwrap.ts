@@ -4,7 +4,8 @@ import { SwapInput } from '../vault/types';
 import { calculateBufferAmounts } from './bufferMath';
 import { WrappingDirection } from './types';
 
-const _MINIMUM_WRAP_AMOUNT = 1000n;
+// minWrapAmount of the frontier Vault (20261016-vault)
+const _MINIMUM_WRAP_AMOUNT = 10000n;
 
 export function erc4626BufferWrapOrUnwrap(
     input: SwapInput,
@@ -23,7 +24,7 @@ export function erc4626BufferWrapOrUnwrap(
         ? WrappingDirection.UNWRAP
         : WrappingDirection.WRAP;
 
-    return calculateBufferAmounts(
+    const amountCalculatedRaw = calculateBufferAmounts(
         wrappingDirection,
         input.swapKind,
         input.amountRaw,
@@ -31,4 +32,11 @@ export function erc4626BufferWrapOrUnwrap(
         poolState.maxDeposit,
         poolState.maxMint,
     );
+
+    // The Vault also checks the calculated amount against the minimum
+    if (amountCalculatedRaw < _MINIMUM_WRAP_AMOUNT) {
+        throw new Error('wrapAmountTooSmall');
+    }
+
+    return amountCalculatedRaw;
 }
