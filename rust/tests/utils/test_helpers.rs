@@ -25,6 +25,7 @@ pub fn convert_to_pool_state(pool: &SupportedPool) -> PoolStateOrBuffer {
                 base: weighted_pool.state.base.clone(),
                 weights: weighted_pool.state.weights.clone(),
                 pool_version: weighted_pool.state.pool_version,
+                min_token_balances: weighted_pool.state.min_token_balances.clone(),
             };
             PoolStateOrBuffer::Pool(Box::new(PoolState::Weighted(weighted_state)))
         }

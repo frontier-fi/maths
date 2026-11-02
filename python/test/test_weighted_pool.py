@@ -1,3 +1,6 @@
+import pytest
+
+from src.common.maths import Rounding
 from src.common.swap_params import SwapParams
 from src.common.types import SwapKind
 from src.pools.weighted.weighted import Weighted
@@ -75,3 +78,52 @@ def test_on_swap_exact_out_rounds_balance_in_up():
     assert make_pool(weights).on_swap(params) == v2
     assert make_pool(weights, pool_version=2).on_swap(params) == v2
     assert make_pool(weights, pool_version=1).on_swap(params) == v1
+
+
+# WeightedPool v2 enforces per-token minimum balances (`getMinTokenBalances()`) in onSwap,
+# computeInvariant and computeBalance, reverting with TokenBalanceBelowMin.
+MIN_WEIGHTS = [5 * 10**17, 5 * 10**17]
+MIN_BALANCES = [10 * 10**18, 10 * 10**18]
+LOW_MINS = [10**18, 10**18]
+HIGH_MIN_OUT = [10**18, 95 * 10**17]
+HIGH_MIN_IN = [10 * 10**18 + 2, 10**18]
+EXACT_IN = SwapParams(
+    swap_kind=SwapKind.GIVENIN,
+    balances_live_scaled18=MIN_BALANCES,
+    index_in=0,
+    index_out=1,
+    amount_given_scaled18=10**18,
+)
+
+
+def test_on_swap_reverts_when_ending_token_out_balance_below_min():
+    pool = make_pool(MIN_WEIGHTS, min_token_balances=HIGH_MIN_OUT)
+    with pytest.raises(ValueError, match="TokenBalanceBelowMin"):
+        pool.on_swap(EXACT_IN)
+
+
+def test_on_swap_reverts_when_balance_token_in_below_min():
+    pool = make_pool(MIN_WEIGHTS, min_token_balances=HIGH_MIN_IN)
+    with pytest.raises(ValueError, match="TokenBalanceBelowMin"):
+        pool.on_swap(EXACT_IN)
+
+
+def test_compute_invariant_reverts_when_balance_below_min():
+    pool = make_pool(MIN_WEIGHTS, min_token_balances=HIGH_MIN_OUT)
+    with pytest.raises(ValueError, match="TokenBalanceBelowMin"):
+        pool.compute_invariant([10 * 10**18, 9 * 10**18], Rounding.ROUND_DOWN)
+
+
+def test_compute_balance_reverts_when_new_balance_below_min():
+    pool = make_pool(MIN_WEIGHTS, min_token_balances=HIGH_MIN_OUT)
+    with pytest.raises(ValueError, match="TokenBalanceBelowMin"):
+        pool.compute_balance(MIN_BALANCES, 1, 9 * 10**17)
+
+
+def test_no_revert_above_min_nor_for_version_1_pools():
+    pool = make_pool(MIN_WEIGHTS, min_token_balances=LOW_MINS)
+    pool.on_swap(EXACT_IN)
+    pool.compute_invariant(MIN_BALANCES, Rounding.ROUND_DOWN)
+    pool.compute_balance(MIN_BALANCES, 1, 9 * 10**17)
+    v1 = make_pool(MIN_WEIGHTS, pool_version=1, min_token_balances=HIGH_MIN_OUT)
+    v1.on_swap(EXACT_IN)

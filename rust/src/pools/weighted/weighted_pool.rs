@@ -16,6 +16,8 @@ pub struct WeightedPool {
     normalized_weights: Vec<U256>,
     /// WeightedPool version; version 2 rounds `balanceTokenIn` up in `on_swap`
     pool_version: u32,
+    /// Per-token minimum balances (scaled 18); enforced for pool version 2 when present
+    min_token_balances: Option<Vec<U256>>,
 }
 
 impl WeightedPool {
@@ -32,12 +34,36 @@ impl WeightedPool {
         Ok(Self {
             normalized_weights: weights,
             pool_version,
+            min_token_balances: None,
         })
     }
 
     /// Get the normalized weights
     pub fn normalized_weights(&self) -> &[U256] {
         &self.normalized_weights
+    }
+
+    /// Pool version 2 reverts if a token balance would fall below its minimum
+    /// (`getMinTokenBalances()`). Skipped when the minimum balances are not part of the pool state.
+    fn ensure_minimum_balance(
+        &self,
+        token_index: usize,
+        balance_scaled_18: &U256,
+    ) -> Result<(), PoolError> {
+        if self.pool_version < 2 {
+            return Ok(());
+        }
+        if let Some(min_token_balances) = &self.min_token_balances {
+            let min = min_token_balances[token_index];
+            if *balance_scaled_18 < min {
+                return Err(PoolError::TokenBalanceBelowMin {
+                    token_index,
+                    balance: *balance_scaled_18,
+                    min,
+                });
+            }
+        }
+        Ok(())
     }
 }
 
@@ -63,22 +89,37 @@ impl PoolBase for WeightedPool {
         let weight_out = &self.normalized_weights[token_out_index];
         let amount_scaled_18 = &swap_params.amount_scaled_18;
 
-        match swap_params.swap_kind {
-            crate::common::types::SwapKind::GivenIn => compute_out_given_exact_in(
-                balance_in,
-                weight_in,
-                balance_out,
-                weight_out,
-                amount_scaled_18,
+        self.ensure_minimum_balance(token_in_index, balance_in)?;
+
+        let (calculated_amount_scaled_18, amount_out_scaled_18) = match swap_params.swap_kind {
+            crate::common::types::SwapKind::GivenIn => {
+                let amount_out = compute_out_given_exact_in(
+                    balance_in,
+                    weight_in,
+                    balance_out,
+                    weight_out,
+                    amount_scaled_18,
+                )?;
+                (amount_out, amount_out)
+            }
+            crate::common::types::SwapKind::GivenOut => (
+                compute_in_given_exact_out(
+                    balance_in,
+                    weight_in,
+                    balance_out,
+                    weight_out,
+                    amount_scaled_18,
+                )?,
+                *amount_scaled_18,
             ),
-            crate::common::types::SwapKind::GivenOut => compute_in_given_exact_out(
-                balance_in,
-                weight_in,
-                balance_out,
-                weight_out,
-                amount_scaled_18,
-            ),
-        }
+        };
+
+        let ending_balance_out = balance_out
+            .checked_sub(amount_out_scaled_18)
+            .ok_or(PoolError::MathOverflow)?;
+        self.ensure_minimum_balance(token_out_index, &ending_balance_out)?;
+
+        Ok(calculated_amount_scaled_18)
     }
 
     fn compute_invariant(
@@ -86,6 +127,10 @@ impl PoolBase for WeightedPool {
         balances_live_scaled_18: &[U256],
         rounding: Rounding,
     ) -> Result<U256, PoolError> {
+        for (i, balance) in balances_live_scaled_18.iter().enumerate() {
+            self.ensure_minimum_balance(i, balance)?;
+        }
+
         match rounding {
             Rounding::RoundDown => {
                 compute_invariant_down(&self.normalized_weights, balances_live_scaled_18)
@@ -112,7 +157,12 @@ impl PoolBase for WeightedPool {
         let weight = &self.normalized_weights[token_in_index];
 
         // Calculate the new balance based on the invariant ratio
-        compute_balance_out_given_invariant(current_balance, weight, invariant_ratio)
+        let new_balance =
+            compute_balance_out_given_invariant(current_balance, weight, invariant_ratio)?;
+
+        self.ensure_minimum_balance(token_in_index, current_balance.min(&new_balance))?;
+
+        Ok(new_balance)
     }
 
     fn get_maximum_invariant_ratio(&self) -> U256 {
@@ -129,6 +179,7 @@ impl From<WeightedState> for WeightedPool {
         Self {
             normalized_weights: weighted_state.weights,
             pool_version: weighted_state.pool_version.unwrap_or(DEFAULT_POOL_VERSION),
+            min_token_balances: weighted_state.min_token_balances,
         }
     }
 }

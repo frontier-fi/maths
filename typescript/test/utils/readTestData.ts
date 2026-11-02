@@ -198,6 +198,9 @@ function mapPool(
             weights: (
                 pool as TransformBigintToString<WeightedPool>
             ).weights.map((w) => BigInt(w)),
+            minTokenBalances: (
+                pool as TransformBigintToString<WeightedPool>
+            ).minTokenBalances?.map((b) => BigInt(b)),
             aggregateSwapFee: BigInt(pool.aggregateSwapFee ?? '0'),
             supportsUnbalancedLiquidity:
                 pool.supportsUnbalancedLiquidity === undefined

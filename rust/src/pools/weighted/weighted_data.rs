@@ -16,6 +16,10 @@ pub struct WeightedState {
     /// 20261021-weighted-pool. Version 1 pools do not round `balanceTokenIn` up in `on_swap`.
     #[serde(default, rename = "poolVersion")]
     pub pool_version: Option<u32>,
+    /// Per-token minimum balances (scaled 18) from the pool's `getMinTokenBalances()`; pool version 2
+    /// only. When omitted, the TokenBalanceBelowMin checks are skipped.
+    #[serde(default, rename = "minTokenBalances")]
+    pub min_token_balances: Option<Vec<U256>>,
 }
 
 impl WeightedState {
@@ -25,6 +29,7 @@ impl WeightedState {
             base,
             weights,
             pool_version: None,
+            min_token_balances: None,
         }
     }
 

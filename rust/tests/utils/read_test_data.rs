@@ -463,6 +463,8 @@ struct RawPool {
     pub weights: Option<Vec<String>>,
     #[serde(rename = "poolVersion")]
     pub pool_version: Option<u32>,
+    #[serde(rename = "minTokenBalances")]
+    pub min_token_balances: Option<Vec<String>>,
     // Stable pool specific fields
     pub amp: Option<String>,
     // Gyro ECLP specific fields
@@ -791,6 +793,15 @@ fn map_pool(raw_pool: RawPool) -> Result<SupportedPool, Box<dyn std::error::Erro
                 },
                 weights,
                 pool_version: raw_pool.pool_version,
+                min_token_balances: raw_pool
+                    .min_token_balances
+                    .map(|balances| {
+                        balances
+                            .into_iter()
+                            .map(|b| b.parse::<U256>())
+                            .collect::<Result<Vec<U256>, _>>()
+                    })
+                    .transpose()?,
             };
             Ok(SupportedPool::Weighted(WeightedPool {
                 base: PoolBase {

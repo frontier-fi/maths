@@ -1,5 +1,5 @@
 from dataclasses import dataclass, fields
-from typing import List
+from typing import List, Optional
 
 from src.common.base_pool_state import BasePoolState
 
@@ -10,6 +10,9 @@ class WeightedState(BasePoolState):
     # WeightedPool `version` (from the pool's `version()` JSON). Defaults to 2, the version deployed in
     # 20261021-weighted-pool. Version 1 pools do not round `balanceTokenIn` up in `on_swap`.
     pool_version: int = 2
+    # Per-token minimum balances (scaled18) from the pool's `getMinTokenBalances()`; pool
+    # version 2 only. When omitted, the TokenBalanceBelowMin checks are skipped.
+    min_token_balances: Optional[List[int]] = None
 
     def __init__(self, **kwargs):
         # Set pool_type before initializing BasePoolState
@@ -49,4 +52,5 @@ def map_weighted_state(pool_state: dict) -> WeightedState:
         # WeightedState fields
         weights=pool_state["weights"],
         pool_version=pool_state.get("poolVersion", 2),
+        min_token_balances=pool_state.get("minTokenBalances"),
     )

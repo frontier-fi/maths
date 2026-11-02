@@ -24,10 +24,16 @@ import {
 export class Weighted implements PoolBase {
     public normalizedWeights: bigint[];
     public poolVersion: number;
+    public minTokenBalances?: bigint[];
 
-    constructor(poolState: { weights: bigint[]; poolVersion?: number }) {
+    constructor(poolState: {
+        weights: bigint[];
+        poolVersion?: number;
+        minTokenBalances?: bigint[];
+    }) {
         this.normalizedWeights = poolState.weights;
         this.poolVersion = poolState.poolVersion ?? 2;
+        this.minTokenBalances = poolState.minTokenBalances;
     }
 
     getMaximumInvariantRatio(): bigint {
@@ -112,27 +118,47 @@ export class Weighted implements PoolBase {
         // Pool version 2 rounds `balanceTokenIn` up on both ExactIn and ExactOut swaps.
         const balanceTokenInScaled18 =
             balancesScaled18[indexIn] + (this.poolVersion >= 2 ? 1n : 0n);
+        const balanceTokenOutScaled18 = balancesScaled18[indexOut];
+
+        this._ensureMinimumBalance(indexIn, balanceTokenInScaled18);
+
+        let calculatedAmountScaled18: bigint;
+        let amountOutScaled18: bigint;
         if (swapKind === SwapKind.GivenIn) {
-            return _computeOutGivenExactIn(
+            calculatedAmountScaled18 = _computeOutGivenExactIn(
                 balanceTokenInScaled18,
                 this.normalizedWeights[indexIn],
-                balancesScaled18[indexOut],
+                balanceTokenOutScaled18,
                 this.normalizedWeights[indexOut],
                 amountGivenScaled18,
             );
+            amountOutScaled18 = calculatedAmountScaled18;
+        } else {
+            calculatedAmountScaled18 = _computeInGivenExactOut(
+                balanceTokenInScaled18,
+                this.normalizedWeights[indexIn],
+                balanceTokenOutScaled18,
+                this.normalizedWeights[indexOut],
+                amountGivenScaled18,
+            );
+            amountOutScaled18 = amountGivenScaled18;
         }
-        return _computeInGivenExactOut(
-            balanceTokenInScaled18,
-            this.normalizedWeights[indexIn],
-            balancesScaled18[indexOut],
-            this.normalizedWeights[indexOut],
-            amountGivenScaled18,
+
+        this._ensureMinimumBalance(
+            indexOut,
+            balanceTokenOutScaled18 - amountOutScaled18,
         );
+
+        return calculatedAmountScaled18;
     }
     computeInvariant(
         balancesLiveScaled18: bigint[],
         rounding: Rounding,
     ): bigint {
+        balancesLiveScaled18.forEach((balance, i) =>
+            this._ensureMinimumBalance(i, balance),
+        );
+
         if (rounding === Rounding.ROUND_UP)
             return _computeInvariantUp(
                 this.normalizedWeights,
@@ -149,10 +175,35 @@ export class Weighted implements PoolBase {
         tokenInIndex: number,
         invariantRatio: bigint,
     ): bigint {
-        return _computeBalanceOutGivenInvariant(
-            balancesLiveScaled18[tokenInIndex],
+        const originalBalance = balancesLiveScaled18[tokenInIndex];
+        const newBalance = _computeBalanceOutGivenInvariant(
+            originalBalance,
             this.normalizedWeights[tokenInIndex],
             invariantRatio,
         );
+
+        this._ensureMinimumBalance(
+            tokenInIndex,
+            originalBalance <= newBalance ? originalBalance : newBalance,
+        );
+
+        return newBalance;
+    }
+
+    /**
+     * Pool version 2 reverts if a token balance would fall below its minimum (`getMinTokenBalances()`).
+     * Skipped when the minimum balances are not part of the pool state.
+     */
+    private _ensureMinimumBalance(
+        tokenIndex: number,
+        balanceScaled18: bigint,
+    ): void {
+        if (this.poolVersion < 2 || !this.minTokenBalances) return;
+        const minimumBalanceScaled18 = this.minTokenBalances[tokenIndex];
+        if (balanceScaled18 < minimumBalanceScaled18) {
+            throw new Error(
+                `TokenBalanceBelowMin ${tokenIndex} ${balanceScaled18} ${minimumBalanceScaled18}`,
+            );
+        }
     }
 }

@@ -1,6 +1,6 @@
 //  pnpm test -- weightedPool.test.ts
 import { describe, expect, test } from 'vitest';
-import { SwapKind } from '../src/index';
+import { Rounding, SwapKind } from '../src/index';
 import { Weighted } from '../src/weighted';
 import {
     _computeInGivenExactOut,
@@ -171,6 +171,79 @@ describe('weighted pool', () => {
             expect(
                 new Weighted({ weights, poolVersion: 1 }).onSwap(params),
             ).toEqual(v1);
+        });
+    });
+    // WeightedPool v2 enforces per-token minimum balances (`getMinTokenBalances()`) in onSwap,
+    // computeInvariant and computeBalance, reverting with TokenBalanceBelowMin.
+    describe('minimum token balances (pool version 2)', () => {
+        const weights = [500000000000000000n, 500000000000000000n];
+        const balances = [10000000000000000000n, 10000000000000000000n];
+        const lowMins = [1000000000000000000n, 1000000000000000000n];
+        const highMinOut = [1000000000000000000n, 9500000000000000000n];
+        const highMinIn = [10000000000000000002n, 1000000000000000000n];
+        const exactIn = {
+            swapKind: SwapKind.GivenIn,
+            amountGivenScaled18: 1000000000000000000n,
+            balancesLiveScaled18: balances,
+            indexIn: 0,
+            indexOut: 1,
+        };
+
+        test('onSwap reverts when the ending tokenOut balance is below min', () => {
+            const pool = new Weighted({
+                weights,
+                minTokenBalances: highMinOut,
+            });
+            expect(() => pool.onSwap(exactIn)).toThrowError(
+                'TokenBalanceBelowMin',
+            );
+        });
+
+        test('onSwap reverts when balanceTokenIn + 1 is below min', () => {
+            const pool = new Weighted({ weights, minTokenBalances: highMinIn });
+            expect(() => pool.onSwap(exactIn)).toThrowError(
+                'TokenBalanceBelowMin',
+            );
+        });
+
+        test('computeInvariant reverts when a balance is below min', () => {
+            const pool = new Weighted({
+                weights,
+                minTokenBalances: highMinOut,
+            });
+            expect(() =>
+                pool.computeInvariant(
+                    [10000000000000000000n, 9000000000000000000n],
+                    Rounding.ROUND_DOWN,
+                ),
+            ).toThrowError('TokenBalanceBelowMin');
+        });
+
+        test('computeBalance reverts when the new balance is below min', () => {
+            const pool = new Weighted({
+                weights,
+                minTokenBalances: highMinOut,
+            });
+            expect(() =>
+                pool.computeBalance(balances, 1, 900000000000000000n),
+            ).toThrowError('TokenBalanceBelowMin');
+        });
+
+        test('no revert above min, nor for version 1 pools', () => {
+            const pool = new Weighted({ weights, minTokenBalances: lowMins });
+            expect(() => pool.onSwap(exactIn)).not.toThrow();
+            expect(() =>
+                pool.computeInvariant(balances, Rounding.ROUND_DOWN),
+            ).not.toThrow();
+            expect(() =>
+                pool.computeBalance(balances, 1, 900000000000000000n),
+            ).not.toThrow();
+            const v1 = new Weighted({
+                weights,
+                poolVersion: 1,
+                minTokenBalances: highMinOut,
+            });
+            expect(() => v1.onSwap(exactIn)).not.toThrow();
         });
     });
 });

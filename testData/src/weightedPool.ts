@@ -43,7 +43,11 @@ export class WeightedPool {
     async fetchImmutableData(
         address: Address,
         blockNumber: bigint,
-    ): Promise<TransformBigintToString<WeightedImmutable>> {
+    ): Promise<
+        TransformBigintToString<WeightedImmutable> & {
+            minTokenBalances?: string[];
+        }
+    > {
         const poolTokensCall = {
             address: this.vault,
             abi: vaultExtensionAbi_V3,
@@ -81,11 +85,28 @@ export class WeightedPool {
             allowFailure: false,
             blockNumber,
         });
+        const poolVersion: number = JSON.parse(multicallResult[3]).version;
+
+        // Per-token minimum balances only exist from WeightedPool v2
+        let minTokenBalances: string[] | undefined;
+        if (poolVersion >= 2) {
+            const result = await this.client.readContract({
+                address,
+                abi: parseAbi([
+                    'function getMinTokenBalances() external view returns (uint256[] memory)',
+                ]),
+                functionName: 'getMinTokenBalances',
+                blockNumber,
+            });
+            minTokenBalances = result.map((b) => b.toString());
+        }
+
         return {
             tokens: multicallResult[0][0].map((token) => token),
             scalingFactors: multicallResult[1][0].map((sf) => sf.toString()),
             weights: multicallResult[2].map((w) => w.toString()),
-            poolVersion: JSON.parse(multicallResult[3]).version,
+            poolVersion,
+            minTokenBalances,
         };
     }
 
