@@ -14,6 +14,7 @@ export type WeightedImmutable = {
     tokens: bigint[];
     scalingFactors: bigint[];
     weights: bigint[];
+    poolVersion: number;
 };
 
 type WeightedMutable = {
@@ -62,9 +63,21 @@ export class WeightedPool {
             ]),
             functionName: 'getNormalizedWeights',
         } as const;
+        const versionCall = {
+            address,
+            abi: parseAbi([
+                'function version() external view returns (string)',
+            ]),
+            functionName: 'version',
+        } as const;
 
         const multicallResult = await this.client.multicall({
-            contracts: [poolTokensCall, tokenRatesCall, tokenWeightsCall],
+            contracts: [
+                poolTokensCall,
+                tokenRatesCall,
+                tokenWeightsCall,
+                versionCall,
+            ],
             allowFailure: false,
             blockNumber,
         });
@@ -72,6 +85,7 @@ export class WeightedPool {
             tokens: multicallResult[0][0].map((token) => token),
             scalingFactors: multicallResult[1][0].map((sf) => sf.toString()),
             weights: multicallResult[2].map((w) => w.toString()),
+            poolVersion: JSON.parse(multicallResult[3]).version,
         };
     }
 

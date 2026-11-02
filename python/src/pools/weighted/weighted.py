@@ -19,6 +19,7 @@ from src.pools.weighted.weighted_math import (
 class Weighted(PoolBase):
     def __init__(self, pool_state: WeightedState):
         self.normalized_weights = pool_state.weights
+        self.pool_version = pool_state.pool_version
 
     def get_maximum_invariant_ratio(self) -> int:
         return _MAX_INVARIANT_RATIO
@@ -27,9 +28,13 @@ class Weighted(PoolBase):
         return _MIN_INVARIANT_RATIO
 
     def on_swap(self, swap_params: SwapParams) -> int:
+        # Pool version 2 rounds `balanceTokenIn` up on both ExactIn and ExactOut swaps.
+        balance_token_in_scaled18 = swap_params.balances_live_scaled18[
+            swap_params.index_in
+        ] + (1 if self.pool_version >= 2 else 0)
         if swap_params.swap_kind.value == SwapKind.GIVENIN.value:
             return compute_out_given_exact_in(
-                swap_params.balances_live_scaled18[swap_params.index_in],
+                balance_token_in_scaled18,
                 self.normalized_weights[swap_params.index_in],
                 swap_params.balances_live_scaled18[swap_params.index_out],
                 self.normalized_weights[swap_params.index_out],
@@ -37,7 +42,7 @@ class Weighted(PoolBase):
             )
 
         return compute_in_given_exact_out(
-            swap_params.balances_live_scaled18[swap_params.index_in],
+            balance_token_in_scaled18,
             self.normalized_weights[swap_params.index_in],
             swap_params.balances_live_scaled18[swap_params.index_out],
             self.normalized_weights[swap_params.index_out],

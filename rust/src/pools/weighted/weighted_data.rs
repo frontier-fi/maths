@@ -12,12 +12,20 @@ pub struct WeightedState {
     pub base: BasePoolState,
     /// Normalized weights (scaled 18)
     pub weights: Vec<U256>,
+    /// WeightedPool `version` (from the pool's `version()` JSON). Defaults to 2, the version deployed in
+    /// 20261021-weighted-pool. Version 1 pools do not round `balanceTokenIn` up in `on_swap`.
+    #[serde(default, rename = "poolVersion")]
+    pub pool_version: Option<u32>,
 }
 
 impl WeightedState {
     /// Create a new weighted pool state
     pub fn new(base: BasePoolState, weights: Vec<U256>) -> Self {
-        Self { base, weights }
+        Self {
+            base,
+            weights,
+            pool_version: None,
+        }
     }
 
     /// Get the base pool state

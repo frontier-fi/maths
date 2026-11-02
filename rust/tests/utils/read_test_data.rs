@@ -461,6 +461,8 @@ struct RawPool {
     pub supports_unbalanced_liquidity: Option<bool>,
     // Weighted pool specific fields
     pub weights: Option<Vec<String>>,
+    #[serde(rename = "poolVersion")]
+    pub pool_version: Option<u32>,
     // Stable pool specific fields
     pub amp: Option<String>,
     // Gyro ECLP specific fields
@@ -788,6 +790,7 @@ fn map_pool(raw_pool: RawPool) -> Result<SupportedPool, Box<dyn std::error::Erro
                     hook_type: None,
                 },
                 weights,
+                pool_version: raw_pool.pool_version,
             };
             Ok(SupportedPool::Weighted(WeightedPool {
                 base: PoolBase {

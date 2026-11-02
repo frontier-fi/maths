@@ -23,9 +23,11 @@ import {
 
 export class Weighted implements PoolBase {
     public normalizedWeights: bigint[];
+    public poolVersion: number;
 
-    constructor(poolState: { weights: bigint[] }) {
+    constructor(poolState: { weights: bigint[]; poolVersion?: number }) {
         this.normalizedWeights = poolState.weights;
+        this.poolVersion = poolState.poolVersion ?? 2;
     }
 
     getMaximumInvariantRatio(): bigint {
@@ -107,9 +109,12 @@ export class Weighted implements PoolBase {
             indexOut,
             amountGivenScaled18,
         } = swapParams;
+        // Pool version 2 rounds `balanceTokenIn` up on both ExactIn and ExactOut swaps.
+        const balanceTokenInScaled18 =
+            balancesScaled18[indexIn] + (this.poolVersion >= 2 ? 1n : 0n);
         if (swapKind === SwapKind.GivenIn) {
             return _computeOutGivenExactIn(
-                balancesScaled18[indexIn],
+                balanceTokenInScaled18,
                 this.normalizedWeights[indexIn],
                 balancesScaled18[indexOut],
                 this.normalizedWeights[indexOut],
@@ -117,7 +122,7 @@ export class Weighted implements PoolBase {
             );
         }
         return _computeInGivenExactOut(
-            balancesScaled18[indexIn],
+            balanceTokenInScaled18,
             this.normalizedWeights[indexIn],
             balancesScaled18[indexOut],
             this.normalizedWeights[indexOut],

@@ -7,6 +7,9 @@ from src.common.base_pool_state import BasePoolState
 @dataclass
 class WeightedState(BasePoolState):
     weights: List[int]
+    # WeightedPool `version` (from the pool's `version()` JSON). Defaults to 2, the version deployed in
+    # 20261021-weighted-pool. Version 1 pools do not round `balanceTokenIn` up in `on_swap`.
+    pool_version: int = 2
 
     def __init__(self, **kwargs):
         # Set pool_type before initializing BasePoolState
@@ -45,4 +48,5 @@ def map_weighted_state(pool_state: dict) -> WeightedState:
         hook_type=pool_state.get("hookType", None),
         # WeightedState fields
         weights=pool_state["weights"],
+        pool_version=pool_state.get("poolVersion", 2),
     )

@@ -24,6 +24,7 @@ pub fn convert_to_pool_state(pool: &SupportedPool) -> PoolStateOrBuffer {
             let weighted_state = WeightedState {
                 base: weighted_pool.state.base.clone(),
                 weights: weighted_pool.state.weights.clone(),
+                pool_version: weighted_pool.state.pool_version,
             };
             PoolStateOrBuffer::Pool(Box::new(PoolState::Weighted(weighted_state)))
         }

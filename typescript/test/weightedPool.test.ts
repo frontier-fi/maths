@@ -2,6 +2,10 @@
 import { describe, expect, test } from 'vitest';
 import { SwapKind } from '../src/index';
 import { Weighted } from '../src/weighted';
+import {
+    _computeInGivenExactOut,
+    _computeOutGivenExactIn,
+} from '../src/weighted/weightedMath';
 
 describe('weighted pool', () => {
     const pool = new Weighted({
@@ -95,6 +99,78 @@ describe('weighted pool', () => {
                 tokenOutRate: 1000000000000000000n,
             });
             expect(maxRemoveAmount).to.eq(30000000000000000000n);
+        });
+    });
+    // WeightedPool v2 (balancer-v3-monorepo #1601, deployed in 20261021-weighted-pool) rounds
+    // `balanceTokenIn` up by 1 wei on both ExactIn and ExactOut swaps.
+    describe('onSwap rounds balanceTokenIn up (pool version 2)', () => {
+        const weights = [500000000000000000n, 500000000000000000n];
+        const balanceIn = 1000000000000n;
+        const balanceOut = 1000000000000000000000000n;
+        const swapParams = (
+            swapKind: SwapKind,
+            amountGivenScaled18: bigint,
+        ) => ({
+            swapKind,
+            amountGivenScaled18,
+            balancesLiveScaled18: [balanceIn, balanceOut],
+            indexIn: 0,
+            indexOut: 1,
+        });
+
+        test('exact in', () => {
+            const amountIn = 100000000000n;
+            const v2 = _computeOutGivenExactIn(
+                balanceIn + 1n,
+                weights[0],
+                balanceOut,
+                weights[1],
+                amountIn,
+            );
+            const v1 = _computeOutGivenExactIn(
+                balanceIn,
+                weights[0],
+                balanceOut,
+                weights[1],
+                amountIn,
+            );
+            expect(v2).not.toEqual(v1);
+            const params = swapParams(SwapKind.GivenIn, amountIn);
+            expect(new Weighted({ weights }).onSwap(params)).toEqual(v2);
+            expect(
+                new Weighted({ weights, poolVersion: 2 }).onSwap(params),
+            ).toEqual(v2);
+            expect(
+                new Weighted({ weights, poolVersion: 1 }).onSwap(params),
+            ).toEqual(v1);
+        });
+
+        test('exact out', () => {
+            const weights = [200000000000000000n, 800000000000000000n];
+            const amountOut = 300000000000000000000000n;
+            const v2 = _computeInGivenExactOut(
+                balanceIn + 1n,
+                weights[0],
+                balanceOut,
+                weights[1],
+                amountOut,
+            );
+            const v1 = _computeInGivenExactOut(
+                balanceIn,
+                weights[0],
+                balanceOut,
+                weights[1],
+                amountOut,
+            );
+            expect(v2).not.toEqual(v1);
+            const params = swapParams(SwapKind.GivenOut, amountOut);
+            expect(new Weighted({ weights }).onSwap(params)).toEqual(v2);
+            expect(
+                new Weighted({ weights, poolVersion: 2 }).onSwap(params),
+            ).toEqual(v2);
+            expect(
+                new Weighted({ weights, poolVersion: 1 }).onSwap(params),
+            ).toEqual(v1);
         });
     });
 });

@@ -7,20 +7,31 @@ use crate::pools::weighted::weighted_data::WeightedState;
 use crate::pools::weighted::weighted_math::{MAX_INVARIANT_RATIO, MIN_INVARIANT_RATIO, *};
 use alloy_primitives::U256;
 
+/// Default WeightedPool version: the version deployed in 20261021-weighted-pool
+pub const DEFAULT_POOL_VERSION: u32 = 2;
+
 /// Weighted pool implementation
 pub struct WeightedPool {
     /// Normalized weights (scaled 18)
     normalized_weights: Vec<U256>,
+    /// WeightedPool version; version 2 rounds `balanceTokenIn` up in `on_swap`
+    pool_version: u32,
 }
 
 impl WeightedPool {
-    /// Create a new weighted pool
+    /// Create a new weighted pool (default pool version)
     pub fn new(weights: Vec<U256>) -> Result<Self, PoolError> {
+        Self::new_with_version(weights, DEFAULT_POOL_VERSION)
+    }
+
+    /// Create a new weighted pool with an explicit pool version
+    pub fn new_with_version(weights: Vec<U256>, pool_version: u32) -> Result<Self, PoolError> {
         if weights.is_empty() {
             return Err(PoolError::InvalidSwapParameters);
         }
         Ok(Self {
             normalized_weights: weights,
+            pool_version,
         })
     }
 
@@ -41,7 +52,12 @@ impl PoolBase for WeightedPool {
             return Err(PoolError::InvalidTokenIndex);
         }
 
-        let balance_in = &swap_params.balances_live_scaled_18[token_in_index];
+        // Pool version 2 rounds `balanceTokenIn` up on both ExactIn and ExactOut swaps.
+        let balance_in = &if self.pool_version >= 2 {
+            swap_params.balances_live_scaled_18[token_in_index] + U256::ONE
+        } else {
+            swap_params.balances_live_scaled_18[token_in_index]
+        };
         let weight_in = &self.normalized_weights[token_in_index];
         let balance_out = &swap_params.balances_live_scaled_18[token_out_index];
         let weight_out = &self.normalized_weights[token_out_index];
@@ -112,6 +128,7 @@ impl From<WeightedState> for WeightedPool {
     fn from(weighted_state: WeightedState) -> Self {
         Self {
             normalized_weights: weighted_state.weights,
+            pool_version: weighted_state.pool_version.unwrap_or(DEFAULT_POOL_VERSION),
         }
     }
 }

@@ -37,6 +37,7 @@ fn create_test_pool_state() -> WeightedState {
             U256::from(500000000000000000u64),
             U256::from(500000000000000000u64),
         ],
+        pool_version: None,
     }
 }
 

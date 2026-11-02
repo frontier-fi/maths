@@ -26,8 +26,8 @@ export class LiquidityBootstrapping extends Weighted {
             projectTokenEndWeight,
         );
 
-        // weighted pool only requires weights
-        super({ weights });
+        // weighted pool only requires weights; LBPool v1 swaps do not round balanceTokenIn up
+        super({ weights, poolVersion: 1 });
 
         this.lbpState = poolState;
     }
