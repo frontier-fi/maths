@@ -117,10 +117,8 @@ pub fn compute_add_liquidity_single_token_exact_out(
     let amount_in = new_balance - current_balances[token_in_index];
 
     // Calculate non-taxable balance
-    let non_taxable_balance = div_down_fixed(
-        &mul_down_fixed(&new_supply, &current_balances[token_in_index])?,
-        total_supply,
-    )?;
+    // Since we multiply and divide we don't need to use FP math.
+    let non_taxable_balance = (new_supply * current_balances[token_in_index]) / *total_supply;
 
     let taxable_amount = amount_in + current_balances[token_in_index] - non_taxable_balance;
 

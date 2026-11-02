@@ -162,9 +162,10 @@ def compute_add_liquidity_single_token_exact_out(
 
     # Calculate the taxable amount, which is the difference
     # between the actual amount in and the non-taxable balance
-    non_taxable_balance = div_down_fixed(
-        mul_down_fixed(new_supply, current_balances[token_in_index]), total_supply
-    )
+    # Since we multiply and divide we don't need to use FP math.
+    non_taxable_balance = (
+        new_supply * current_balances[token_in_index]
+    ) // total_supply
 
     taxable_amount = amount_in + current_balances[token_in_index] - non_taxable_balance
 
