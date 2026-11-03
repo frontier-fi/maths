@@ -4,7 +4,8 @@ from src.pools.buffer.buffer_data import BufferState
 from src.pools.buffer.buffer_math import calculate_buffer_amounts
 from src.pools.buffer.enums import WrappingDirection
 
-_MINIMUM_WRAP_AMOUNT = 1000
+# minWrapAmount of the frontier Vault (20261016-vault)
+_MINIMUM_WRAP_AMOUNT = 10000
 
 
 def erc4626_buffer_wrap_or_unwrap(swap_input: SwapInput, pool_state: BufferState):
@@ -20,9 +21,15 @@ def erc4626_buffer_wrap_or_unwrap(swap_input: SwapInput, pool_state: BufferState
         else WrappingDirection.WRAP
     )
 
-    return calculate_buffer_amounts(
+    amount_calculated_raw = calculate_buffer_amounts(
         wrapping_direction,
         swap_input.swap_kind,
         swap_input.amount_raw,
         pool_state.rate,
     )
+
+    # The Vault also checks the calculated amount against the minimum
+    if amount_calculated_raw < _MINIMUM_WRAP_AMOUNT:
+        raise ValueError("wrapAmountTooSmall")
+
+    return amount_calculated_raw

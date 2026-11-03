@@ -137,10 +137,9 @@ export function computeAddLiquiditySingleTokenExactOut(
 
     // Calculate the taxable amount, which is the difference
     // between the actual amount in and the non-taxable balance
-    const nonTaxableBalance = MathSol.divDownFixed(
-        MathSol.mulDownFixed(newSupply, currentBalances[tokenInIndex]),
-        totalSupply,
-    );
+    // Since we multiply and divide we don't need to use FP math.
+    const nonTaxableBalance =
+        (newSupply * currentBalances[tokenInIndex]) / totalSupply;
 
     const taxableAmount =
         amountIn + currentBalances[tokenInIndex] - nonTaxableBalance;

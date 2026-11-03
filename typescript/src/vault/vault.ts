@@ -44,7 +44,6 @@ import { StableSurgeHook } from '../hooks/stableSurgeHook';
 import { AkronHook } from '../hooks/akron/akronHook';
 
 const _MINIMUM_TRADE_AMOUNT = 1e6;
-// const _MINIMUM_WRAP_AMOUNT = 1e3;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type PoolClassConstructor = new (..._args: any[]) => PoolBase;

@@ -111,4 +111,41 @@ describe('buffer pool', () => {
             'ERC4626ExceededMaxMint 1692675790387595 1692675790387594',
         );
     });
+    // The frontier Vault (20261016-vault) is deployed with minWrapAmount = 1e4, and checks both the given and
+    // the calculated amount (Vault.erc4626BufferWrapOrUnwrap).
+    describe('minimum wrap amount', () => {
+        const wrapped = '0xd4fa2d31b7968e448877f69a96de69f5de8cd23e';
+        const underlying = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48';
+        const pool: BufferState = {
+            poolType: 'Buffer',
+            rate: 2000000000000000000n,
+            poolAddress: wrapped,
+            tokens: [wrapped, underlying],
+            maxDeposit: 1000000000000000000n,
+            maxMint: 1000000000000000000n,
+        };
+        const wrap = (amountRaw: bigint) =>
+            new Vault().swap(
+                {
+                    amountRaw,
+                    tokenIn: underlying,
+                    tokenOut: wrapped,
+                    swapKind: 0,
+                },
+                pool,
+            );
+
+        test('throws when the given amount is below 1e4', () => {
+            expect(() => wrap(9999n)).toThrowError('wrapAmountTooSmall');
+        });
+
+        test('throws when the calculated amount is below 1e4', () => {
+            // 15000 underlying at rate 2 wraps into 7500 shares
+            expect(() => wrap(15000n)).toThrowError('wrapAmountTooSmall');
+        });
+
+        test('does not throw when both amounts are at least 1e4', () => {
+            expect(wrap(20000n)).toEqual(10000n);
+        });
+    });
 });

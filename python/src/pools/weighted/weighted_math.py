@@ -139,10 +139,14 @@ def compute_balance_out_given_invariant(
     # ******************************************************************************************/
 
     # Rounds result up overall.
+    # Round up the exponent when the invariant ratio is above one (increasing the balance
+    # ratio), and round it down otherwise (the base is below one, so a smaller exponent
+    # increases the balance ratio).
+    div_up_or_down = div_up_fixed if invariant_ratio > WAD else div_down_fixed
     # Calculate by how much the token balance has to increase to match the invariantRatio.
     balance_ratio = pow_up_fixed(
         invariant_ratio,
-        div_up_fixed(WAD, weight),
+        div_up_or_down(WAD, weight),
     )
 
     return mul_up_fixed(current_balance, balance_ratio)

@@ -113,6 +113,13 @@ pub enum PoolError {
         requested: U256,
         max: U256,
     },
+
+    /// Weighted pool (v2) token balance would fall below its minimum
+    TokenBalanceBelowMin {
+        token_index: usize,
+        balance: U256,
+        min: U256,
+    },
 }
 
 impl fmt::Display for PoolError {
@@ -175,6 +182,17 @@ impl fmt::Display for PoolError {
             }
             PoolError::Erc4626ExceededMaxMint { requested, max } => {
                 write!(f, "ERC4626ExceededMaxMint {} {}", requested, max)
+            }
+            PoolError::TokenBalanceBelowMin {
+                token_index,
+                balance,
+                min,
+            } => {
+                write!(
+                    f,
+                    "TokenBalanceBelowMin {} {} {}",
+                    token_index, balance, min
+                )
             }
         }
     }

@@ -100,10 +100,15 @@ export const _computeBalanceOutGivenInvariant = (
 
     // Rounds result up overall.
 
+    // Round up the exponent when the invariant ratio is above one (increasing the balance ratio), and round it
+    // down otherwise (the base is below one, so a smaller exponent increases the balance ratio).
+    const divUpOrDown =
+        invariantRatio > WAD ? MathSol.divUpFixed : MathSol.divDownFixed;
+
     // Calculate by how much the token balance has to increase to match the invariantRatio.
     const balanceRatio = MathSol.powUpFixed(
         invariantRatio,
-        MathSol.divUpFixed(WAD, weight),
+        divUpOrDown.call(MathSol, WAD, weight),
     );
 
     return MathSol.mulUpFixed(currentBalance, balanceRatio);

@@ -28,6 +28,9 @@ class LiquidityBootstrapping(Weighted):
             project_token_end_weight,
         )
         self.normalized_weights = weights
+        # LBPool v1 swaps do not round balanceTokenIn up
+        self.pool_version = 1
+        self.min_token_balances = None
         self.lbp_state = pool_state
 
     def on_swap(self, swap_params: SwapParams) -> int:
