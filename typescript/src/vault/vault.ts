@@ -15,7 +15,11 @@ import { QuantAmm } from '../quantAmm';
 import { LiquidityBootstrapping } from '../liquidityBootstrapping';
 import { FixedPriceLBP } from '../fixedPriceLBP';
 
-import { BufferState, erc4626BufferWrapOrUnwrap } from '../buffer';
+import {
+    BufferState,
+    DEFAULT_MINIMUM_WRAP_AMOUNT,
+    erc4626BufferWrapOrUnwrap,
+} from '../buffer';
 import {
     isSameAddress,
     toRawUndoRateRoundDown,
@@ -43,7 +47,8 @@ import { DirectionalFeeHook } from '../hooks/directionalFeeHook';
 import { StableSurgeHook } from '../hooks/stableSurgeHook';
 import { AkronHook } from '../hooks/akron/akronHook';
 
-const _MINIMUM_TRADE_AMOUNT = 1e6;
+// minTradeAmount of the frontier Vault (20261016-vault)
+export const DEFAULT_MINIMUM_TRADE_AMOUNT = 1_000_000n;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type PoolClassConstructor = new (..._args: any[]) => PoolBase;
@@ -53,13 +58,24 @@ export type HookClasses = Readonly<Record<string, HookClassConstructor>>;
 export class Vault {
     private readonly poolClasses: PoolClasses = {} as const;
     private readonly hookClasses: HookClasses = {} as const;
+    private readonly minTradeAmount: bigint;
+    private readonly minWrapAmount: bigint;
 
     constructor(config?: {
         customPoolClasses?: PoolClasses;
         customHookClasses?: HookClasses;
+        // Vault minimums (raw amounts); default to the frontier Vault values
+        minTradeAmount?: bigint;
+        minWrapAmount?: bigint;
     }) {
-        const { customPoolClasses, customHookClasses: hookClasses } =
-            config || {};
+        const {
+            customPoolClasses,
+            customHookClasses: hookClasses,
+            minTradeAmount,
+            minWrapAmount,
+        } = config || {};
+        this.minTradeAmount = minTradeAmount ?? DEFAULT_MINIMUM_TRADE_AMOUNT;
+        this.minWrapAmount = minWrapAmount ?? DEFAULT_MINIMUM_WRAP_AMOUNT;
         this.poolClasses = {
             WEIGHTED: Weighted,
             STABLE: Stable,
@@ -160,7 +176,11 @@ export class Vault {
 
         // buffer is handled separately than a "normal" pool
         if (!('totalSupply' in poolState)) {
-            return erc4626BufferWrapOrUnwrap(swapInput, poolState);
+            return erc4626BufferWrapOrUnwrap(
+                swapInput,
+                poolState,
+                this.minWrapAmount,
+            );
         }
 
         const pool = this.getPool(poolState);
@@ -803,7 +823,7 @@ export class Vault {
     // Minimum token value in or out (applied to scaled18 values), enforced as a security measure to block potential
     // exploitation of rounding errors. This is called in the swap context, so zero is not a valid amount.
     private _ensureValidSwapAmount(tradeAmount: bigint): boolean {
-        if (tradeAmount < _MINIMUM_TRADE_AMOUNT) {
+        if (tradeAmount < this.minTradeAmount) {
             throw new Error(`TradeAmountTooSmall ${tradeAmount}`);
         }
         return true;

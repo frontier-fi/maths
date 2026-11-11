@@ -9,6 +9,11 @@ export type BufferMutable = {
 export type BufferImmutable = {
     poolAddress: string;
     tokens: string[];
+    // Decimals of the wrapped (ERC4626, `poolAddress`) token and its underlying token. With a decimal-normalized
+    // rate the calculated amount is in the given token's decimals; when both are set it is scaled to the calculated
+    // token's raw decimals for the Vault's minimum wrap amount check. The returned amount is not scaled.
+    mainDecimals?: number;
+    underlyingDecimals?: number;
 };
 
 /**
