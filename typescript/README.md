@@ -4,17 +4,25 @@ Typescript implementation of maths for Balancer V3 pools, forked from [balancer-
 
 ## Installation
 
-This package is not published to NPM. It is distributed as a tarball on [GitHub releases](https://github.com/frontier-fi/maths/releases) under the same package name, so it can replace the upstream package in place:
-
-```json
-"@balancer-labs/balancer-maths": "https://github.com/frontier-fi/maths/releases/download/v0.0.42/frontier-maths.tgz"
-```
-
-To build the tarball (`frontier-maths.tgz`) for a release:
+Published on npm as [`@frontier-fi/maths`](https://www.npmjs.com/package/@frontier-fi/maths):
 
 ```bash
-pnpm release:pack
+pnpm add @frontier-fi/maths
 ```
+
+To swap it in for the upstream package without changing any imports, install it under the upstream name with an npm alias:
+
+```json
+"@balancer-labs/balancer-maths": "npm:@frontier-fi/maths@^0.1.0"
+```
+
+## Releasing
+
+Releases are automated with [changesets](https://github.com/changesets/changesets) and the `Typescript Release` workflow:
+
+1. In a PR that changes the package, run `pnpm changeset` (from `typescript/`), pick the bump type and describe the change. Commit the generated file in `.changeset/`.
+2. When the PR is merged to `main`, the workflow opens (or updates) a `chore: version packages` PR that bumps `package.json` and writes `CHANGELOG.md`.
+3. Merging that PR publishes the new version to npm (trusted publishing with provenance), then tags `vX.Y.Z` and creates a GitHub release.
 
 ## Hooks Support
 

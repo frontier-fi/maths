@@ -1,0 +1,88 @@
+name: Typescript Release
+
+# On every push to main:
+# - pending changesets: open or update the "chore: version packages" PR
+# - no pending changesets: publish the package.json version to npm if it is not published yet,
+#   then tag vX.Y.Z and create a GitHub release if they do not exist yet
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'typescript/**'
+      - '.github/workflows/typescript-release.yml'
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+  contents: write # version PR branch, tags and GitHub releases
+  pull-requests: write # version PR
+  id-token: write # npm trusted publishing (OIDC) and provenance
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./typescript
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4.0.0
+        with:
+          version: 8
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      # npm trusted publishing needs npm >= 11.5.1
+      - name: Update npm
+        run: npm install -g npm@^11.5.1
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test
+        run: pnpm test:ci
+
+      - name: Create version PR
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          cwd: ./typescript
+          version: pnpm changeset:version
+          title: 'chore: version packages'
+          commit: 'chore: version packages'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to npm
+        if: steps.changesets.outputs.hasChangesets == 'false'
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "$NAME@$VERSION" version > /dev/null 2>&1; then
+            echo "$NAME@$VERSION is already on npm"
+          else
+            npm publish --provenance --access public
+          fi
+
+      - name: Tag and create GitHub release
+        if: steps.changesets.outputs.hasChangesets == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v$VERSION"
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "$TAG already released"
+            exit 0
+          fi
+          # Release notes: this version's section of CHANGELOG.md
+          awk -v v="## $VERSION" '$0 == v {found=1; next} found && /^## / {exit} found {print}' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md"

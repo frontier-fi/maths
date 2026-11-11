@@ -8,7 +8,7 @@ Python implementation. See [README](./python/README.md).
 
 ## Typescript
 
-Typescript implementation. See [README](./testData/README.md) and [NPM package](https://www.npmjs.com/package/@balancer-labs/balancer-maths).
+Typescript implementation. See [README](./testData/README.md) and [NPM package](https://www.npmjs.com/package/@frontier-fi/maths).
 
 ## TestData
 
