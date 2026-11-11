@@ -5,15 +5,16 @@ import { calculateBufferAmounts } from './bufferMath';
 import { WrappingDirection } from './types';
 
 // minWrapAmount of the frontier Vault (20261016-vault)
-const _MINIMUM_WRAP_AMOUNT = 10000n;
+export const DEFAULT_MINIMUM_WRAP_AMOUNT = 10_000n;
 
 export function erc4626BufferWrapOrUnwrap(
     input: SwapInput,
     poolState: BufferState,
+    minWrapAmount: bigint = DEFAULT_MINIMUM_WRAP_AMOUNT,
 ): bigint {
-    if (input.amountRaw < _MINIMUM_WRAP_AMOUNT) {
+    if (input.amountRaw < minWrapAmount) {
         // If amount given is too small, rounding issues can be introduced that favors the user and can drain
-        // the buffer. _MINIMUM_WRAP_AMOUNT prevents it. Most tokens have protections against it already, this
+        // the buffer. minWrapAmount prevents it. Most tokens have protections against it already, this
         // is just an extra layer of security.
         throw new Error('wrapAmountTooSmall');
     }
@@ -34,7 +35,7 @@ export function erc4626BufferWrapOrUnwrap(
     );
 
     // The Vault also checks the calculated amount against the minimum
-    if (amountCalculatedRaw < _MINIMUM_WRAP_AMOUNT) {
+    if (amountCalculatedRaw < minWrapAmount) {
         throw new Error('wrapAmountTooSmall');
     }
 
