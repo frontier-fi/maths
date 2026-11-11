@@ -48,9 +48,10 @@ jobs:
 
       - name: Set up Node
         uses: actions/setup-node@v7
+        # No registry-url: npm's trusted publishing exchanges the OIDC token itself for the default registry, and the
+        # .npmrc setup-node would write only adds an unset ${NODE_AUTH_TOKEN} placeholder
         with:
           node-version: 24
-          registry-url: https://registry.npmjs.org
 
       # npm trusted publishing needs npm >= 11.5.1
       - name: Update npm
