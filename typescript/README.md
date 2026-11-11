@@ -24,6 +24,10 @@ Releases are automated with [changesets](https://github.com/changesets/changeset
 2. When the PR is merged to `main`, the workflow opens (or updates) a `chore: version packages` PR that bumps `package.json` and writes `CHANGELOG.md`.
 3. Merging that PR publishes the new version to npm (trusted publishing with provenance), then tags `vX.Y.Z` and creates a GitHub release.
 
+The workflow runs in the `release` GitHub Actions environment (deployments limited to `main`). The version PR is opened by the `maxyz-actions` GitHub App (client ID hardcoded in the workflow, private key from the `MAXYZ_ACTIONS_PRIVATE_KEY` org secret). Because the PR comes from an app rather than `GITHUB_TOKEN`, the PR checks run on it.
+
+Local development uses pnpm 12 (pinned in `packageManager`).
+
 ## Hooks Support
 
 Hooks are supported on a case by case basis.

@@ -10,17 +10,21 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v7
 
-    - name: Set up Node & pnpm
-      uses: pnpm/action-setup@v4.0.0
+    - name: Set up pnpm
+      uses: pnpm/action-setup@v6
       with:
-        node-version: 18
-        version: 8
+        package_json_file: typescript/package.json
+
+    - name: Set up Node
+      uses: actions/setup-node@v7
+      with:
+        node-version: 24
 
     - name: Install Dependencies
       working-directory: ./typescript
-      run: pnpm i
+      run: pnpm install --frozen-lockfile
 
     - name: Lint
       working-directory: ./typescript
