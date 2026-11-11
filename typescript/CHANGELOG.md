@@ -1,5 +1,11 @@
 # @frontier-fi/maths
 
+## 0.1.1
+
+### Patch Changes
+
+- 44a6a72: Tooling only, no changes to the package code: built with pnpm 12 on Node 24, and released from the `release` environment with npm trusted publishing and provenance.
+
 ## 0.1.0
 
 ### Minor Changes
