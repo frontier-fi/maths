@@ -82,8 +82,9 @@ describe('MathSol and TokenAmount exports', () => {
         const human = TokenAmount.fromHumanAmount(usdc, '12.345678');
         expect(human.amount).toBe(12_345_678n);
         expect(human.scale18).toBe(12_345_678_000_000_000_000n);
-        expect(human.toSignificant(6)).toBe('12.3456');
-        expect(human.toSignificant(8)).toBe('12.345678');
+        expect(human.toSignificant(4)).toBe('12.3456');
+        expect(human.toSignificant(6)).toBe('12.345678');
+        expect(human.toExact()).toBe('12.345678');
 
         // Round half-away-from-zero with carry overflow into integer part
         expect(TokenAmount.fromHumanAmount(usdc, '0.9999995').amount).toBe(
@@ -214,15 +215,40 @@ describe('MathSol and TokenAmount exports', () => {
         );
     });
 
-    test('TokenAmount.toSignificant preserves significant digits for small and negative amounts', () => {
+    test('TokenAmount.toSignificant and toExact preserve SDK SOR compatibility and small/negative amounts', () => {
         expect(TokenAmount.fromRawAmount(usdc, 0n).toSignificant()).toBe('0');
+        expect(TokenAmount.fromRawAmount(usdc, 0n).toExact()).toBe('0');
         expect(TokenAmount.fromRawAmount(usdc, 50_000n).toSignificant(4)).toBe(
             '0.05',
         );
 
+        // SDK SOR compatibility: passing token.decimals is always exact (including 0-decimal tokens)
+        const sorUsdc = TokenAmount.fromHumanAmount(usdc, '1234.56789');
+        expect(sorUsdc.toSignificant(usdc.decimals)).toBe('1234.56789');
+        expect(sorUsdc.toExact()).toBe('1234.56789');
+
+        const sorWeth = TokenAmount.fromHumanAmount(
+            weth,
+            '2.123456789123456789',
+        );
+        expect(sorWeth.toSignificant(weth.decimals)).toBe(
+            '2.123456789123456789',
+        );
+        expect(sorWeth.toExact()).toBe('2.123456789123456789');
+
+        const sorZeroDec = TokenAmount.fromRawAmount(zeroDec, 42n);
+        expect(sorZeroDec.toSignificant(zeroDec.decimals)).toBe('42');
+        expect(sorZeroDec.toExact()).toBe('42');
+        expect(
+            TokenAmount.fromRawAmount(zeroDec, 0n).toSignificant(
+                zeroDec.decimals,
+            ),
+        ).toBe('0');
+
         // Small nonzero amounts retain significant digits instead of becoming "0"
         const tinyWeth = TokenAmount.fromHumanAmount(weth, '0.0000001');
         expect(tinyWeth.toSignificant()).toBe('0.0000001');
+        expect(tinyWeth.toExact()).toBe('0.0000001');
         expect(TokenAmount.fromRawAmount(weth, 1n).toSignificant()).toBe(
             '0.000000000000000001',
         );
@@ -232,22 +258,55 @@ describe('MathSol and TokenAmount exports', () => {
                 '0.000000312457062375',
             ).toSignificant(6),
         ).toBe('0.000000312457');
+        expect(
+            TokenAmount.fromHumanAmount(
+                weth,
+                '0.000000312457062375',
+            ).toSignificant(weth.decimals),
+        ).toBe('0.000000312457062375');
 
         // Negative fractional amounts format sign before leading zero
         expect(TokenAmount.fromRawAmount(usdc, -1n).toSignificant()).toBe(
             '-0.000001',
         );
+        expect(TokenAmount.fromRawAmount(usdc, -1n).toExact()).toBe(
+            '-0.000001',
+        );
         expect(
-            TokenAmount.fromHumanAmount(usdc, '-12.345678').toSignificant(6),
+            TokenAmount.fromHumanAmount(usdc, '-12.345678').toSignificant(4),
         ).toBe('-12.3456');
 
-        // Large integer and zero-decimal amounts respect significantDigits without scientific notation
+        // Large integer amounts never lose integer digits
         expect(
             TokenAmount.fromHumanAmount(usdc, '12345678').toSignificant(6),
-        ).toBe('12345600');
+        ).toBe('12345678');
+        expect(
+            TokenAmount.fromHumanAmount(usdc, '12.75').toSignificant(0),
+        ).toBe('12');
         expect(TokenAmount.fromRawAmount(zeroDec, -42n).toSignificant()).toBe(
             '-42',
         );
-        expect(() => tinyWeth.toSignificant(0)).toThrow(RangeError);
+        expect(() => tinyWeth.toSignificant(-1)).toThrow(RangeError);
+
+        // Across all valid decimals 0..18, toSignificant(token.decimals) === toExact()
+        for (let decimals = 0; decimals <= 18; decimals++) {
+            const tok = new Token(1, usdc.address, decimals);
+            for (const raw of [
+                0n,
+                1n,
+                -1n,
+                123_456_789n,
+                -987_654_321_098_765_432_109n,
+            ]) {
+                const amt = TokenAmount.fromRawAmount(tok, raw);
+                expect(amt.toSignificant(tok.decimals)).toBe(amt.toExact());
+                expect(
+                    TokenAmount.fromHumanAmount(
+                        tok,
+                        amt.toExact() as `${number}`,
+                    ).amount,
+                ).toBe(raw);
+            }
+        }
     });
 });

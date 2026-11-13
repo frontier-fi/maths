@@ -206,10 +206,37 @@ export class TokenAmount {
         return new TokenAmount(this.token, divFloor(this.amount * WAD, other));
     }
 
+    public toExact(): string {
+        if (this.amount === 0n) return '0';
+
+        const sign = this.amount < 0n ? '-' : '';
+        const digits = (
+            this.amount < 0n ? -this.amount : this.amount
+        ).toString();
+        const decimals = this.token.decimals;
+
+        if (decimals === 0) {
+            return `${sign}${digits}`;
+        }
+
+        if (digits.length <= decimals) {
+            const padded = digits.padStart(decimals, '0').replace(/0+$/, '');
+            return `${sign}0.${padded}`;
+        }
+
+        const intLen = digits.length - decimals;
+        const intPart = digits.slice(0, intLen);
+        const fracPart = digits.slice(intLen).replace(/0+$/, '');
+
+        return fracPart.length === 0
+            ? `${sign}${intPart}`
+            : `${sign}${intPart}.${fracPart}`;
+    }
+
     public toSignificant(significantDigits = 6): string {
-        if (!Number.isInteger(significantDigits) || significantDigits <= 0) {
+        if (!Number.isInteger(significantDigits) || significantDigits < 0) {
             throw new RangeError(
-                `significantDigits must be a positive integer: ${significantDigits}`,
+                `significantDigits must be a non-negative integer: ${significantDigits}`,
             );
         }
         if (this.amount === 0n) return '0';
@@ -220,24 +247,28 @@ export class TokenAmount {
         ).toString();
         const decimals = this.token.decimals;
 
-        const kept =
-            digits.length > significantDigits
-                ? digits.slice(0, significantDigits) +
-                  '0'.repeat(digits.length - significantDigits)
-                : digits;
-
         if (decimals === 0) {
-            return `${sign}${kept}`;
+            return `${sign}${digits}`;
         }
 
-        if (kept.length <= decimals) {
-            const padded = kept.padStart(decimals, '0').replace(/0+$/, '');
+        if (digits.length <= decimals) {
+            const keep = Math.max(1, significantDigits);
+            const sig =
+                digits.length > keep
+                    ? digits.slice(0, keep) + '0'.repeat(digits.length - keep)
+                    : digits;
+            const padded = sig.padStart(decimals, '0').replace(/0+$/, '');
             return `${sign}0.${padded}`;
         }
 
-        const intLen = kept.length - decimals;
-        const intPart = kept.slice(0, intLen);
-        const fracPart = kept.slice(intLen).replace(/0+$/, '');
+        const intLen = digits.length - decimals;
+        const intPart = digits.slice(0, intLen);
+        if (significantDigits === 0) {
+            return `${sign}${intPart}`;
+        }
+        const fracPart = digits
+            .slice(intLen, intLen + significantDigits)
+            .replace(/0+$/, '');
 
         return fracPart.length === 0
             ? `${sign}${intPart}`

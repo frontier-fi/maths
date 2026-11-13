@@ -65,10 +65,10 @@ def pow_down_fixed(x: int, y: int, version: int = 0) -> int:
     if y == WAD and version != 1:
         return x
     if y == TWO_WAD and version != 1:
-        return mul_up_fixed(x, x)
+        return mul_down_fixed(x, x)
     if y == FOUR_WAD and version != 1:
-        square = mul_up_fixed(x, x)
-        return mul_up_fixed(square, square)
+        square = mul_down_fixed(x, x)
+        return mul_down_fixed(square, square)
 
     raw = LogExpMath.pow(x, y)
     max_error = mul_up_fixed(raw, MAX_POW_RELATIVE_ERROR) + 1
