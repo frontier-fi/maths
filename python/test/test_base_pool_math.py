@@ -1,5 +1,12 @@
 from src.common.base_pool_math import compute_add_liquidity_single_token_exact_out
-from src.common.maths import complement_fixed, div_up_fixed, mul_up_fixed
+from src.common.constants import WAD
+from src.common.maths import (
+    complement_fixed,
+    div_up_fixed,
+    mul_up_fixed,
+    pow_down_fixed,
+    pow_up_fixed,
+)
 
 
 # v3 BasePoolMath (vault 25d73b3d) computes the non-taxable balance as
@@ -36,3 +43,11 @@ def test_add_liquidity_single_token_exact_out_rounds_non_taxable_balance_once():
     assert expected_fee == 1
     assert result.swap_fee_amounts[0] == expected_fee
     assert result.amount_in_with_fee == new_balance - balances[0] + expected_fee
+
+
+def test_pow_down_fixed_fast_paths_round_down():
+    x = WAD + 1
+    assert pow_down_fixed(x, 2 * WAD) == WAD + 2
+    assert pow_up_fixed(x, 2 * WAD) == WAD + 3
+    assert pow_down_fixed(x, 4 * WAD) == WAD + 4
+    assert pow_up_fixed(x, 4 * WAD) == WAD + 7

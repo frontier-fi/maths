@@ -76,11 +76,11 @@ pub fn pow_down_fixed_with_version(
         return Ok(*base);
     }
     if *exponent == TWO_WAD && version != 1 {
-        return mul_up_fixed(base, base);
+        return mul_down_fixed(base, base);
     }
     if *exponent == FOUR_WAD && version != 1 {
-        let square = mul_up_fixed(base, base)?;
-        return mul_up_fixed(&square, &square);
+        let square = mul_down_fixed(base, base)?;
+        return mul_down_fixed(&square, &square);
     }
 
     let raw = log_exp_math::pow(base, exponent)?;
@@ -175,5 +175,20 @@ mod tests {
     fn mul_down_fixed_normal_ok() {
         let result = mul_down_fixed(&WAD, &WAD).unwrap();
         assert_eq!(result, WAD);
+    }
+
+    #[test]
+    fn pow_down_fixed_fast_paths_round_down() {
+        let x = WAD + U256::ONE;
+        assert_eq!(
+            pow_down_fixed(&x, &TWO_WAD).unwrap(),
+            WAD + U256::from(2u64)
+        );
+        assert_eq!(pow_up_fixed(&x, &TWO_WAD).unwrap(), WAD + U256::from(3u64));
+        assert_eq!(
+            pow_down_fixed(&x, &FOUR_WAD).unwrap(),
+            WAD + U256::from(4u64)
+        );
+        assert_eq!(pow_up_fixed(&x, &FOUR_WAD).unwrap(), WAD + U256::from(7u64));
     }
 }
