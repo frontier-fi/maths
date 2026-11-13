@@ -27,10 +27,56 @@ export const DECIMAL_SCALES: Record<number, bigint> = {
     18: 1000000000000000000n,
 };
 
-function parseDecimalUnits(value: string, decimals: number): bigint {
-    if (!Number.isInteger(decimals) || decimals < 0) {
-        throw new Error(`Invalid decimals: ${decimals}`);
+function assertValidDecimals(decimals: number): void {
+    if (!Number.isInteger(decimals) || decimals < 0 || decimals > 18) {
+        throw new RangeError(
+            `Token decimals must be an integer between 0 and 18: ${decimals}`,
+        );
     }
+}
+
+function toBigInt(value: BigintIsh): bigint {
+    if (typeof value === 'bigint') {
+        return value;
+    }
+    if (typeof value === 'number') {
+        if (!Number.isSafeInteger(value)) {
+            throw new RangeError(
+                `Unsafe integer number: ${value}. Pass a bigint or string instead.`,
+            );
+        }
+        return BigInt(value);
+    }
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (trimmed === '') {
+            throw new SyntaxError('Cannot convert empty string to a BigInt');
+        }
+        return BigInt(trimmed);
+    }
+    throw new TypeError(`Unsupported BigintIsh value: ${String(value)}`);
+}
+
+function divFloor(a: bigint, b: bigint): bigint {
+    if (b === 0n) {
+        throw new RangeError('Division by zero');
+    }
+    const q = a / b;
+    const r = a % b;
+    return r !== 0n && r > 0n !== b > 0n ? q - 1n : q;
+}
+
+function divCeil(a: bigint, b: bigint): bigint {
+    if (b === 0n) {
+        throw new RangeError('Division by zero');
+    }
+    const q = a / b;
+    const r = a % b;
+    return r !== 0n && r > 0n === b > 0n ? q + 1n : q;
+}
+
+function parseDecimalUnits(value: string, decimals: number): bigint {
+    assertValidDecimals(decimals);
     if (!/^-?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)$/.test(value)) {
         throw new Error(`Invalid decimal value: ${value}`);
     }
@@ -97,10 +143,12 @@ export class TokenAmount {
         scale18Amount: BigintIsh,
         divUp?: boolean,
     ): TokenAmount {
+        assertValidDecimals(token.decimals);
         const scalar = DECIMAL_SCALES[18 - token.decimals];
+        const scaled = toBigInt(scale18Amount);
         const rawAmount = divUp
-            ? 1n + (BigInt(scale18Amount) - 1n) / scalar
-            : BigInt(scale18Amount) / scalar;
+            ? divCeil(scaled, scalar)
+            : divFloor(scaled, scalar);
         return new TokenAmount(token, rawAmount);
     }
 
@@ -113,69 +161,87 @@ export class TokenAmount {
     }
 
     protected constructor(token: Token, amount: BigintIsh) {
+        assertValidDecimals(token.decimals);
         this.decimalScale = DECIMAL_SCALES[token.decimals];
         this.token = token;
-        this.amount = BigInt(amount);
+        this.amount = toBigInt(amount);
         this.scalar = DECIMAL_SCALES[18 - token.decimals];
         this.scale18 = this.amount * this.scalar;
     }
 
+    private assertSameToken(other: TokenAmount): void {
+        if (
+            !this.token.isEqual(other.token) ||
+            this.token.decimals !== other.token.decimals
+        ) {
+            throw new Error(
+                `Token mismatch: ${this.token.chainId}:${this.token.address} (${this.token.decimals}) vs ${other.token.chainId}:${other.token.address} (${other.token.decimals})`,
+            );
+        }
+    }
+
     public add(other: TokenAmount): TokenAmount {
+        this.assertSameToken(other);
         return new TokenAmount(this.token, this.amount + other.amount);
     }
 
     public sub(other: TokenAmount): TokenAmount {
+        this.assertSameToken(other);
         return new TokenAmount(this.token, this.amount - other.amount);
     }
 
     public mulUpFixed(other: bigint): TokenAmount {
-        const product = this.amount * other;
-        const multiplied = (product - 1n) / WAD + 1n;
-        return new TokenAmount(this.token, multiplied);
+        return new TokenAmount(this.token, divCeil(this.amount * other, WAD));
     }
 
     public mulDownFixed(other: bigint): TokenAmount {
-        const multiplied = (this.amount * other) / WAD;
-        return new TokenAmount(this.token, multiplied);
+        return new TokenAmount(this.token, divFloor(this.amount * other, WAD));
     }
 
     public divUpFixed(other: bigint): TokenAmount {
-        const divided = (this.amount * WAD + other - 1n) / other;
-        return new TokenAmount(this.token, divided);
+        return new TokenAmount(this.token, divCeil(this.amount * WAD, other));
     }
 
     public divDownFixed(other: bigint): TokenAmount {
-        const divided = (this.amount * WAD) / other;
-        return new TokenAmount(this.token, divided);
+        return new TokenAmount(this.token, divFloor(this.amount * WAD, other));
     }
 
     public toSignificant(significantDigits = 6): string {
+        if (!Number.isInteger(significantDigits) || significantDigits <= 0) {
+            throw new RangeError(
+                `significantDigits must be a positive integer: ${significantDigits}`,
+            );
+        }
         if (this.amount === 0n) return '0';
 
-        const scaleFactor = 10n ** BigInt(significantDigits);
-        const scaled = (this.amount * scaleFactor) / this.decimalScale;
+        const sign = this.amount < 0n ? '-' : '';
+        const digits = (
+            this.amount < 0n ? -this.amount : this.amount
+        ).toString();
+        const decimals = this.token.decimals;
 
-        if (scaled === 0n) return '0';
+        const kept =
+            digits.length > significantDigits
+                ? digits.slice(0, significantDigits) +
+                  '0'.repeat(digits.length - significantDigits)
+                : digits;
 
-        const scaledStr = scaled.toString();
-
-        if (scaledStr.length <= significantDigits) {
-            const padded = scaledStr.padStart(significantDigits, '0');
-            let end = padded.length;
-            while (end > 0 && padded[end - 1] === '0') end--;
-            if (end === 0) return '0';
-            return `0.${padded.slice(0, end)}`;
+        if (decimals === 0) {
+            return `${sign}${kept}`;
         }
 
-        const intLen = scaledStr.length - significantDigits;
-        const intPart = scaledStr.slice(0, intLen);
-        const fracPart = scaledStr.slice(intLen);
+        if (kept.length <= decimals) {
+            const padded = kept.padStart(decimals, '0').replace(/0+$/, '');
+            return `${sign}0.${padded}`;
+        }
 
-        let end = fracPart.length;
-        while (end > 0 && fracPart[end - 1] === '0') end--;
+        const intLen = kept.length - decimals;
+        const intPart = kept.slice(0, intLen);
+        const fracPart = kept.slice(intLen).replace(/0+$/, '');
 
-        if (end === 0) return intPart;
-        return `${intPart}.${fracPart.slice(0, end)}`;
+        return fracPart.length === 0
+            ? `${sign}${intPart}`
+            : `${sign}${intPart}.${fracPart}`;
     }
 
     public toInputAmount(): InputAmount {

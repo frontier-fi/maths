@@ -1,5 +1,9 @@
+/** 18-decimal fixed-point unit (1e18). */
 export const WAD = 1000000000000000000n;
-export const RAY = 1000000000000000000000000000000000000n;
+/** 27-decimal fixed-point unit (1e27). */
+export const RAY = 1000000000000000000000000000n;
+/** 36-decimal fixed-point unit (1e36), used internally for high-precision logarithms. */
+export const ONE_36 = 1000000000000000000000000000000000000n;
 
 export const TWO_WAD = 2000000000000000000n;
 export const FOUR_WAD = 4000000000000000000n;
@@ -111,11 +115,11 @@ export class MathSol {
             return x;
         }
         if (y === TWO_WAD && version !== 1) {
-            return MathSol.mulUpFixed(x, x);
+            return MathSol.mulDownFixed(x, x);
         }
         if (y === FOUR_WAD && version !== 1) {
-            const square = MathSol.mulUpFixed(x, x);
-            return MathSol.mulUpFixed(square, square);
+            const square = MathSol.mulDownFixed(x, x);
+            return MathSol.mulDownFixed(square, square);
         }
         const raw = LogExpMath.pow(x, y);
         const maxError =
@@ -398,8 +402,8 @@ export class LogExpMath {
 
         // Recall that 36 digit fixed point division requires multiplying by ONE_36, and multiplication requires
         // division by ONE_36.
-        const z = ((x - RAY) * RAY) / (x + RAY);
-        const z_squared = (z * z) / RAY;
+        const z = ((x - ONE_36) * ONE_36) / (x + ONE_36);
+        const z_squared = (z * z) / ONE_36;
 
         // num is the numerator of the series: the z^(2 * n + 1) term
         let num = z;
@@ -408,25 +412,25 @@ export class LogExpMath {
         let seriesSum = num;
 
         // In each step, the numerator is multiplied by z^2
-        num = (num * z_squared) / RAY;
+        num = (num * z_squared) / ONE_36;
         seriesSum += num / 3n;
 
-        num = (num * z_squared) / RAY;
+        num = (num * z_squared) / ONE_36;
         seriesSum += num / 5n;
 
-        num = (num * z_squared) / RAY;
+        num = (num * z_squared) / ONE_36;
         seriesSum += num / 7n;
 
-        num = (num * z_squared) / RAY;
+        num = (num * z_squared) / ONE_36;
         seriesSum += num / 9n;
 
-        num = (num * z_squared) / RAY;
+        num = (num * z_squared) / ONE_36;
         seriesSum += num / 11n;
 
-        num = (num * z_squared) / RAY;
+        num = (num * z_squared) / ONE_36;
         seriesSum += num / 13n;
 
-        num = (num * z_squared) / RAY;
+        num = (num * z_squared) / ONE_36;
         seriesSum += num / 15n;
 
         // 8 Taylor terms are sufficient for 36 decimal precision.
