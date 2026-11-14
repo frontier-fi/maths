@@ -80,7 +80,8 @@ export class MathSol {
     }
 
     static divUpFixed(a: bigint, b: bigint): bigint {
-        return this.mulDivUpFixed(a, WAD, b);
+        // Not `this`: the helpers are also used as detached `FixedPointFunction` values
+        return MathSol.mulDivUpFixed(a, WAD, b);
     }
 
     // also called divUpRaw in stable maths
