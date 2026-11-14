@@ -10,20 +10,41 @@ import {
 } from '../src';
 
 describe('MathSol', () => {
-    // A zero denominator must fail, as it does with plain bigint division (and reverts on chain), instead of
-    // returning a plausible zero.
+    // A zero denominator must fail for any numerator, as it reverts on chain (FixedPoint.divDown panics,
+    // mulDivUp / divUp / divUpRaw revert with ZeroDivision), instead of returning a plausible zero.
+    describe('zero denominator', () => {
+        const divisions = {
+            divUp: (a: bigint, b: bigint) => MathSol.divUp(a, b),
+            divDownFixed: (a: bigint, b: bigint) => MathSol.divDownFixed(a, b),
+            divUpFixed: (a: bigint, b: bigint) => MathSol.divUpFixed(a, b),
+            mulDivUpFixed: (a: bigint, b: bigint) =>
+                MathSol.mulDivUpFixed(a, WAD, b),
+        };
+
+        test.each(Object.entries(divisions))(
+            '%s throws for a non-zero numerator',
+            (_, divide) => {
+                expect(() => divide(1n, 0n)).toThrowError(RangeError);
+                expect(() => divide(10n ** 18n, 0n)).toThrowError(RangeError);
+            },
+        );
+
+        test.each(Object.entries(divisions))(
+            '%s throws for a zero numerator',
+            (_, divide) => {
+                expect(() => divide(0n, 0n)).toThrowError(RangeError);
+            },
+        );
+
+        test.each(Object.entries(divisions))(
+            '%s returns zero for a zero numerator',
+            (_, divide) => {
+                expect(divide(0n, 3n)).toEqual(0n);
+            },
+        );
+    });
+
     describe('divUp', () => {
-        test('throws on a zero denominator', () => {
-            expect(() => MathSol.divUp(1n, 0n)).toThrowError(RangeError);
-            expect(() => MathSol.divUp(10n ** 18n, 0n)).toThrowError(
-                RangeError,
-            );
-        });
-
-        test('returns zero for a zero numerator', () => {
-            expect(MathSol.divUp(0n, 3n)).toEqual(0n);
-        });
-
         test('rounds up', () => {
             expect(MathSol.divUp(7n, 2n)).toEqual(4n);
             expect(MathSol.divUp(6n, 2n)).toEqual(3n);

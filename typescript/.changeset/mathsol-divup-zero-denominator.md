@@ -2,4 +2,4 @@
 '@frontier-fi/maths': patch
 ---
 
-`MathSol.divUp` throws a `RangeError` on a zero denominator again, instead of returning `0n`. A zero numerator still returns `0n`.
+`MathSol` divisions (`divUp`, `divDownFixed`, `divUpFixed`, `mulDivUpFixed`) throw a `RangeError` on a zero denominator for any numerator, matching the onchain reverts, instead of returning `0n`.
