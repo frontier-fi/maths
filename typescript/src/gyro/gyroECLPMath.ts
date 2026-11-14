@@ -79,25 +79,25 @@ export class GyroECLPMath {
 
     static validateParams(params: EclpParams): void {
         _require(
-            0 <= params.s && params.s <= this._ONE,
-            `s must be >= 0 and <= ${this._ONE}`,
+            0 <= params.s && params.s <= GyroECLPMath._ONE,
+            `s must be >= 0 and <= ${GyroECLPMath._ONE}`,
         );
         _require(
-            0 <= params.c && params.c <= this._ONE,
-            `c must be >= 0 and <= ${this._ONE}`,
+            0 <= params.c && params.c <= GyroECLPMath._ONE,
+            `c must be >= 0 and <= ${GyroECLPMath._ONE}`,
         );
 
         const sc: Vector2 = { x: params.s, y: params.c };
-        const scnorm2 = this.scalarProd(sc, sc);
+        const scnorm2 = GyroECLPMath.scalarProd(sc, sc);
 
         _require(
-            this._ONE - this._ROTATION_VECTOR_NORM_ACCURACY <= scnorm2 &&
-                scnorm2 <= this._ONE + this._ROTATION_VECTOR_NORM_ACCURACY,
+            GyroECLPMath._ONE - GyroECLPMath._ROTATION_VECTOR_NORM_ACCURACY <= scnorm2 &&
+                scnorm2 <= GyroECLPMath._ONE + GyroECLPMath._ROTATION_VECTOR_NORM_ACCURACY,
             'RotationVectorNotNormalized()',
         );
         _require(
-            0 <= params.lambda && params.lambda <= this._MAX_STRETCH_FACTOR,
-            `lambda must be >= 0 and <= ${this._MAX_STRETCH_FACTOR}`,
+            0 <= params.lambda && params.lambda <= GyroECLPMath._MAX_STRETCH_FACTOR,
+            `lambda must be >= 0 and <= ${GyroECLPMath._MAX_STRETCH_FACTOR}`,
         );
     }
 
@@ -112,32 +112,32 @@ export class GyroECLPMath {
             'tauBeta.x must be > tauAlpha.x',
         );
 
-        const norm2 = this.scalarProdXp(derived.tauAlpha, derived.tauAlpha);
+        const norm2 = GyroECLPMath.scalarProdXp(derived.tauAlpha, derived.tauAlpha);
 
         _require(
-            this._ONE_XP - this._DERIVED_TAU_NORM_ACCURACY_XP <= norm2 &&
-                norm2 <= this._ONE_XP + this._DERIVED_TAU_NORM_ACCURACY_XP,
+            GyroECLPMath._ONE_XP - GyroECLPMath._DERIVED_TAU_NORM_ACCURACY_XP <= norm2 &&
+                norm2 <= GyroECLPMath._ONE_XP + GyroECLPMath._DERIVED_TAU_NORM_ACCURACY_XP,
             'RotationVectorNotNormalized()',
         );
-        _require(derived.u <= this._ONE_XP, `u must be <= ${this._ONE_XP}`);
-        _require(derived.v <= this._ONE_XP, `v must be <= ${this._ONE_XP}`);
-        _require(derived.w <= this._ONE_XP, `w must be <= ${this._ONE_XP}`);
-        _require(derived.z <= this._ONE_XP, `z must be <= ${this._ONE_XP}`);
+        _require(derived.u <= GyroECLPMath._ONE_XP, `u must be <= ${GyroECLPMath._ONE_XP}`);
+        _require(derived.v <= GyroECLPMath._ONE_XP, `v must be <= ${GyroECLPMath._ONE_XP}`);
+        _require(derived.w <= GyroECLPMath._ONE_XP, `w must be <= ${GyroECLPMath._ONE_XP}`);
+        _require(derived.z <= GyroECLPMath._ONE_XP, `z must be <= ${GyroECLPMath._ONE_XP}`);
 
         _require(
-            this._ONE_XP - this._DERIVED_DSQ_NORM_ACCURACY_XP <= derived.dSq &&
+            GyroECLPMath._ONE_XP - GyroECLPMath._DERIVED_DSQ_NORM_ACCURACY_XP <= derived.dSq &&
                 derived.dSq <=
-                    this._ONE_XP + this._DERIVED_DSQ_NORM_ACCURACY_XP,
+                    GyroECLPMath._ONE_XP + GyroECLPMath._DERIVED_DSQ_NORM_ACCURACY_XP,
             'DerivedDsqWrong()',
         );
 
         const mulDenominator = SignedFixedPoint.divXpU(
-            this._ONE_XP,
-            this.calcAChiAChiInXp(params, derived) - this._ONE_XP,
+            GyroECLPMath._ONE_XP,
+            GyroECLPMath.calcAChiAChiInXp(params, derived) - GyroECLPMath._ONE_XP,
         );
         _require(
-            mulDenominator <= this._MAX_INV_INVARIANT_DENOMINATOR_XP,
-            `mulDenominator must be <= ${this._MAX_INV_INVARIANT_DENOMINATOR_XP}`,
+            mulDenominator <= GyroECLPMath._MAX_INV_INVARIANT_DENOMINATOR_XP,
+            `mulDenominator must be <= ${GyroECLPMath._MAX_INV_INVARIANT_DENOMINATOR_XP}`,
         );
     }
 
@@ -395,12 +395,12 @@ export class GyroECLPMath {
         const x = balances[0];
         const y = balances[1];
 
-        if (x + y > this._MAX_BALANCES) {
+        if (x + y > GyroECLPMath._MAX_BALANCES) {
             throw new MaxBalancesExceededError();
         }
 
-        const atAChi = this.calcAtAChi(x, y, params, derived);
-        const invariantResult = this.calcInvariantSqrt(x, y, params, derived);
+        const atAChi = GyroECLPMath.calcAtAChi(x, y, params, derived);
+        const invariantResult = GyroECLPMath.calcInvariantSqrt(x, y, params, derived);
         const sqrt = invariantResult[0];
         let err = invariantResult[1];
 
@@ -416,17 +416,17 @@ export class GyroECLPMath {
         }
         // Calculate the error in the numerator, scale the error by 20 to be sure all possible terms accounted for
         err =
-            (SignedFixedPoint.mulUpMagU(params.lambda, x + y) / this._ONE_XP +
+            (SignedFixedPoint.mulUpMagU(params.lambda, x + y) / GyroECLPMath._ONE_XP +
                 err +
                 1n) *
             20n;
 
-        const achiachi = this.calcAChiAChiInXp(params, derived);
+        const achiachi = GyroECLPMath.calcAChiAChiInXp(params, derived);
         // A chi \cdot A chi > 1, so round it up to round denominator up.
         // Denominator uses extra precision, so we do * 1/denominator so we are sure the calculation doesn't overflow.
         const mulDenominator = SignedFixedPoint.divXpU(
-            this._ONE_XP,
-            achiachi - this._ONE_XP,
+            GyroECLPMath._ONE_XP,
+            achiachi - GyroECLPMath._ONE_XP,
         );
 
         // As alternative, could do, but could overflow: invariant = (AtAChi.add(sqrt) - err).divXp(denominator);
@@ -451,10 +451,10 @@ export class GyroECLPMath {
                 ((params.lambda * params.lambda) /
                     BigInt('1000000000000000000000000000000000000')) *
                 40n) /
-                this._ONE_XP +
+                GyroECLPMath._ONE_XP +
             1n;
 
-        if (invariant + err > this._MAX_INVARIANT) {
+        if (invariant + err > GyroECLPMath._MAX_INVARIANT) {
             throw new MaxInvariantExceededError();
         }
 
@@ -672,9 +672,9 @@ export class GyroECLPMath {
         d: DerivedEclpParams,
     ): [bigint, bigint] {
         let val =
-            this.calcMinAtxAChiySqPlusAtxSq(x, y, p, d) +
-            this.calc2AtxAtyAChixAChiy(x, y, p, d) +
-            this.calcMinAtyAChixSqPlusAtySq(x, y, p, d);
+            GyroECLPMath.calcMinAtxAChiySqPlusAtxSq(x, y, p, d) +
+            GyroECLPMath.calc2AtxAtyAChixAChiy(x, y, p, d) +
+            GyroECLPMath.calcMinAtyAChixSqPlusAtySq(x, y, p, d);
 
         const err =
             (SignedFixedPoint.mulUpMagU(x, x) +
@@ -694,27 +694,27 @@ export class GyroECLPMath {
     ): bigint {
         const r: Vector2 = { x: invariant, y: invariant };
         const ab: Vector2 = {
-            x: this.virtualOffset0(params, derived, r),
-            y: this.virtualOffset1(params, derived, r),
+            x: GyroECLPMath.virtualOffset0(params, derived, r),
+            y: GyroECLPMath.virtualOffset1(params, derived, r),
         };
         const vec: Vector2 = {
             x: balances[0] - ab.x,
             y: balances[1] - ab.y,
         };
 
-        const transformedVec = this.mulA(params, vec);
+        const transformedVec = GyroECLPMath.mulA(params, vec);
         const pc: Vector2 = {
             x: SignedFixedPoint.divDownMagU(transformedVec.x, transformedVec.y),
-            y: this._ONE,
+            y: GyroECLPMath._ONE,
         };
 
-        const pgx = this.scalarProd(
+        const pgx = GyroECLPMath.scalarProd(
             pc,
-            this.mulA(params, { x: this._ONE, y: 0n }),
+            GyroECLPMath.mulA(params, { x: GyroECLPMath._ONE, y: 0n }),
         );
         return SignedFixedPoint.divDownMag(
             pgx,
-            this.scalarProd(pc, this.mulA(params, { x: 0n, y: this._ONE })),
+            GyroECLPMath.scalarProd(pc, GyroECLPMath.mulA(params, { x: 0n, y: GyroECLPMath._ONE })),
         );
     }
 
@@ -726,13 +726,13 @@ export class GyroECLPMath {
         assetIndex: number,
     ): void {
         if (assetIndex === 0) {
-            const xPlus = this.maxBalances0(params, derived, invariant);
-            if (newBal > this._MAX_BALANCES || newBal > xPlus) {
+            const xPlus = GyroECLPMath.maxBalances0(params, derived, invariant);
+            if (newBal > GyroECLPMath._MAX_BALANCES || newBal > xPlus) {
                 throw new Error('Asset bounds exceeded');
             }
         } else {
-            const yPlus = this.maxBalances1(params, derived, invariant);
-            if (newBal > this._MAX_BALANCES || newBal > yPlus) {
+            const yPlus = GyroECLPMath.maxBalances1(params, derived, invariant);
+            if (newBal > GyroECLPMath._MAX_BALANCES || newBal > yPlus) {
                 throw new Error('Asset bounds exceeded');
             }
         }
@@ -747,18 +747,12 @@ export class GyroECLPMath {
         invariant: Vector2,
     ): bigint {
         const [ixIn, ixOut, calcGiven] = tokenInIsToken0
-            ? [0, 1, this.calcYGivenX]
-            : [1, 0, this.calcXGivenY];
+            ? [0, 1, GyroECLPMath.calcYGivenX]
+            : [1, 0, GyroECLPMath.calcXGivenY];
 
         const balInNew = balances[ixIn] + amountIn;
-        this.checkAssetBounds(params, derived, invariant, balInNew, ixIn);
-        const balOutNew = calcGiven.call(
-            this,
-            balInNew,
-            params,
-            derived,
-            invariant,
-        );
+        GyroECLPMath.checkAssetBounds(params, derived, invariant, balInNew, ixIn);
+        const balOutNew = calcGiven(balInNew, params, derived, invariant);
         return balances[ixOut] - balOutNew;
     }
 
@@ -771,21 +765,15 @@ export class GyroECLPMath {
         invariant: Vector2,
     ): bigint {
         const [ixIn, ixOut, calcGiven] = tokenInIsToken0
-            ? [0, 1, this.calcXGivenY] // Note: reversed compared to calcOutGivenIn
-            : [1, 0, this.calcYGivenX]; // Note: reversed compared to calcOutGivenIn
+            ? [0, 1, GyroECLPMath.calcXGivenY] // Note: reversed compared to calcOutGivenIn
+            : [1, 0, GyroECLPMath.calcYGivenX]; // Note: reversed compared to calcOutGivenIn
 
         if (amountOut > balances[ixOut]) {
             throw new Error('Asset bounds exceeded');
         }
         const balOutNew = balances[ixOut] - amountOut;
-        const balInNew = calcGiven.call(
-            this,
-            balOutNew,
-            params,
-            derived,
-            invariant,
-        );
-        this.checkAssetBounds(params, derived, invariant, balInNew, ixIn);
+        const balInNew = calcGiven(balOutNew, params, derived, invariant);
+        GyroECLPMath.checkAssetBounds(params, derived, invariant, balInNew, ixIn);
         return balInNew - balances[ixIn];
     }
 
@@ -859,7 +847,7 @@ export class GyroECLPMath {
         sTerm.x = SignedFixedPoint.ONE_XP - sTerm.x;
         sTerm.y = SignedFixedPoint.ONE_XP - sTerm.y;
 
-        q.c = -this.calcXpXpDivLambdaLambda(x, r, lambda, s, c, tauBeta, dSq);
+        q.c = -GyroECLPMath.calcXpXpDivLambdaLambda(x, r, lambda, s, c, tauBeta, dSq);
         q.c =
             q.c +
             SignedFixedPoint.mulDownXpToNpU(
@@ -989,10 +977,10 @@ export class GyroECLPMath {
         r: Vector2,
     ): bigint {
         const ab: Vector2 = {
-            x: this.virtualOffset0(params, d, r),
-            y: this.virtualOffset1(params, d, r),
+            x: GyroECLPMath.virtualOffset0(params, d, r),
+            y: GyroECLPMath.virtualOffset1(params, d, r),
         };
-        return this.solveQuadraticSwap(
+        return GyroECLPMath.solveQuadraticSwap(
             params.lambda,
             x,
             params.s,
@@ -1011,10 +999,10 @@ export class GyroECLPMath {
         r: Vector2,
     ): bigint {
         const ba: Vector2 = {
-            x: this.virtualOffset1(params, d, r),
-            y: this.virtualOffset0(params, d, r),
+            x: GyroECLPMath.virtualOffset1(params, d, r),
+            y: GyroECLPMath.virtualOffset0(params, d, r),
         };
-        return this.solveQuadraticSwap(
+        return GyroECLPMath.solveQuadraticSwap(
             params.lambda,
             y,
             params.c,
