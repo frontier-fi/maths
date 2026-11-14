@@ -85,9 +85,10 @@ export class MathSol {
 
     // also called divUpRaw in stable maths
     static divUp(a: bigint, b: bigint): bigint {
-        if (a === 0n || b === 0n) {
+        if (a === 0n) {
             return 0n;
         }
+        // A zero denominator throws a RangeError (division by zero), as it reverts on chain
         return 1n + (a - 1n) / b;
     }
 
