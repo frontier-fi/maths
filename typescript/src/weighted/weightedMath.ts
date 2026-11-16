@@ -108,7 +108,7 @@ export const _computeBalanceOutGivenInvariant = (
     // Calculate by how much the token balance has to increase to match the invariantRatio.
     const balanceRatio = MathSol.powUpFixed(
         invariantRatio,
-        divUpOrDown.call(MathSol, WAD, weight),
+        divUpOrDown(WAD, weight),
     );
 
     return MathSol.mulUpFixed(currentBalance, balanceRatio);

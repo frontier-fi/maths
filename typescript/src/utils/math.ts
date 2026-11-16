@@ -26,6 +26,14 @@ export const _require = (b: boolean, message: string) => {
 
 export type FixedPointFunction = (a: bigint, b: bigint) => bigint;
 
+/**
+ * Throws a RangeError for a zero denominator, whatever the numerator, as the onchain FixedPoint divisions revert.
+ * Plain bigint division already throws for a non-zero numerator; this also covers the zero numerator shortcuts.
+ */
+const _ensureNonZeroDenominator = (denominator: bigint): void => {
+    if (denominator === 0n) throw new RangeError('Division by zero');
+};
+
 export class MathSol {
     static max(a: bigint, b: bigint): bigint {
         return a >= b ? a : b;
@@ -54,6 +62,7 @@ export class MathSol {
     /// @dev Return (a * b) / c, rounding up.
     static mulDivUpFixed(a: bigint, b: bigint, c: bigint): bigint {
         // Multiple overflow protection is done by Solidity 0.8x
+        _ensureNonZeroDenominator(c);
         const product = a * b;
 
         if (product === 0n) {
@@ -72,6 +81,7 @@ export class MathSol {
     }
 
     static divDownFixed(a: bigint, b: bigint): bigint {
+        _ensureNonZeroDenominator(b);
         if (a === 0n) {
             return 0n;
         }
@@ -80,12 +90,14 @@ export class MathSol {
     }
 
     static divUpFixed(a: bigint, b: bigint): bigint {
-        return this.mulDivUpFixed(a, WAD, b);
+        // Not `this`: the helpers are also used as detached `FixedPointFunction` values
+        return MathSol.mulDivUpFixed(a, WAD, b);
     }
 
     // also called divUpRaw in stable maths
     static divUp(a: bigint, b: bigint): bigint {
-        if (a === 0n || b === 0n) {
+        _ensureNonZeroDenominator(b);
+        if (a === 0n) {
             return 0n;
         }
         return 1n + (a - 1n) / b;

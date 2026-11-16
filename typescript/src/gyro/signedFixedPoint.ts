@@ -20,7 +20,7 @@ export class SignedFixedPoint {
     }
 
     static addMag(a: bigint, b: bigint): bigint {
-        return a > 0n ? this.add(a, b) : this.sub(a, b);
+        return a > 0n ? SignedFixedPoint.add(a, b) : SignedFixedPoint.sub(a, b);
     }
 
     static sub(a: bigint, b: bigint): bigint {
@@ -36,11 +36,11 @@ export class SignedFixedPoint {
         if (!(a === 0n || product / a === b)) {
             throw new FixedPointError('MulOverflow');
         }
-        return product / this.ONE;
+        return product / SignedFixedPoint.ONE;
     }
 
     static mulDownMagU(a: bigint, b: bigint): bigint {
-        return (a * b) / this.ONE;
+        return (a * b) / SignedFixedPoint.ONE;
     }
 
     static mulUpMag(a: bigint, b: bigint): bigint {
@@ -50,9 +50,9 @@ export class SignedFixedPoint {
         }
 
         if (product > 0n) {
-            return (product - 1n) / this.ONE + 1n;
+            return (product - 1n) / SignedFixedPoint.ONE + 1n;
         } else if (product < 0n) {
-            return (product + 1n) / this.ONE - 1n;
+            return (product + 1n) / SignedFixedPoint.ONE - 1n;
         }
         return 0n;
     }
@@ -60,9 +60,9 @@ export class SignedFixedPoint {
     static mulUpMagU(a: bigint, b: bigint): bigint {
         const product = a * b;
         if (product > 0n) {
-            return (product - 1n) / this.ONE + 1n;
+            return (product - 1n) / SignedFixedPoint.ONE + 1n;
         } else if (product < 0n) {
-            return (product + 1n) / this.ONE - 1n;
+            return (product + 1n) / SignedFixedPoint.ONE - 1n;
         }
         return 0n;
     }
@@ -75,8 +75,8 @@ export class SignedFixedPoint {
             return 0n;
         }
 
-        const aInflated = a * this.ONE;
-        if (aInflated / a !== this.ONE) {
+        const aInflated = a * SignedFixedPoint.ONE;
+        if (aInflated / a !== SignedFixedPoint.ONE) {
             throw new FixedPointError('DivInterval');
         }
 
@@ -87,7 +87,7 @@ export class SignedFixedPoint {
         if (b === 0n) {
             throw new FixedPointError('ZeroDivision');
         }
-        return (a * this.ONE) / b;
+        return (a * SignedFixedPoint.ONE) / b;
     }
 
     static divUpMag(a: bigint, b: bigint): bigint {
@@ -105,8 +105,8 @@ export class SignedFixedPoint {
             localA = -a;
         }
 
-        const aInflated = localA * this.ONE;
-        if (aInflated / localA !== this.ONE) {
+        const aInflated = localA * SignedFixedPoint.ONE;
+        if (aInflated / localA !== SignedFixedPoint.ONE) {
             throw new FixedPointError('DivInterval');
         }
 
@@ -132,9 +132,9 @@ export class SignedFixedPoint {
         }
 
         if (localA > 0n) {
-            return (localA * this.ONE - 1n) / localB + 1n;
+            return (localA * SignedFixedPoint.ONE - 1n) / localB + 1n;
         }
-        return (localA * this.ONE + 1n) / localB - 1n;
+        return (localA * SignedFixedPoint.ONE + 1n) / localB - 1n;
     }
 
     static mulXp(a: bigint, b: bigint): bigint {
@@ -142,11 +142,11 @@ export class SignedFixedPoint {
         if (!(a === 0n || product / a === b)) {
             throw new FixedPointError('MulOverflow');
         }
-        return product / this.ONE_XP;
+        return product / SignedFixedPoint.ONE_XP;
     }
 
     static mulXpU(a: bigint, b: bigint): bigint {
-        return (a * b) / this.ONE_XP;
+        return (a * b) / SignedFixedPoint.ONE_XP;
     }
 
     static divXp(a: bigint, b: bigint): bigint {
@@ -157,8 +157,8 @@ export class SignedFixedPoint {
             return 0n;
         }
 
-        const aInflated = a * this.ONE_XP;
-        if (aInflated / a !== this.ONE_XP) {
+        const aInflated = a * SignedFixedPoint.ONE_XP;
+        if (aInflated / a !== SignedFixedPoint.ONE_XP) {
             throw new FixedPointError('DivInterval');
         }
 
@@ -169,7 +169,7 @@ export class SignedFixedPoint {
         if (b === 0n) {
             throw new FixedPointError('ZeroDivision');
         }
-        return (a * this.ONE_XP) / b;
+        return (a * SignedFixedPoint.ONE_XP) / b;
     }
 
     static mulDownXpToNp(a: bigint, b: bigint): bigint {
@@ -229,9 +229,9 @@ export class SignedFixedPoint {
     }
 
     static complement(x: bigint): bigint {
-        if (x >= this.ONE || x <= 0n) {
+        if (x >= SignedFixedPoint.ONE || x <= 0n) {
             return 0n;
         }
-        return this.ONE - x;
+        return SignedFixedPoint.ONE - x;
     }
 }

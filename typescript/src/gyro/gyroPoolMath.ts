@@ -17,7 +17,7 @@ export class GyroPoolMath {
             return 0n;
         }
 
-        let guess = this._makeInitialGuess(input);
+        let guess = GyroPoolMath._makeInitialGuess(input);
 
         // At this point `guess` is an estimation with one bit of precision. We know the true value is a uint128,
         // since it is the square root of a uint256. Newton's method converges quadratically (precision doubles at
@@ -50,25 +50,25 @@ export class GyroPoolMath {
 
     static _makeInitialGuess(input: bigint): bigint {
         if (input >= WAD) {
-            return (1n << this._intLog2Halved(input / WAD)) * WAD;
+            return (1n << GyroPoolMath._intLog2Halved(input / WAD)) * WAD;
         } else {
-            if (input <= 10n) return this._SQRT_1E_NEG_17;
+            if (input <= 10n) return GyroPoolMath._SQRT_1E_NEG_17;
             if (input <= 100n) return 10n ** 10n;
-            if (input <= 1000n) return this._SQRT_1E_NEG_15;
+            if (input <= 1000n) return GyroPoolMath._SQRT_1E_NEG_15;
             if (input <= 10000n) return 10n ** 11n;
-            if (input <= 100000n) return this._SQRT_1E_NEG_13;
+            if (input <= 100000n) return GyroPoolMath._SQRT_1E_NEG_13;
             if (input <= 1000000n) return 10n ** 12n;
-            if (input <= 10000000n) return this._SQRT_1E_NEG_11;
+            if (input <= 10000000n) return GyroPoolMath._SQRT_1E_NEG_11;
             if (input <= 100000000n) return 10n ** 13n;
-            if (input <= 1000000000n) return this._SQRT_1E_NEG_9;
+            if (input <= 1000000000n) return GyroPoolMath._SQRT_1E_NEG_9;
             if (input <= 10000000000n) return 10n ** 14n;
-            if (input <= 100000000000n) return this._SQRT_1E_NEG_7;
+            if (input <= 100000000000n) return GyroPoolMath._SQRT_1E_NEG_7;
             if (input <= 1000000000000n) return 10n ** 15n;
-            if (input <= 10000000000000n) return this._SQRT_1E_NEG_5;
+            if (input <= 10000000000000n) return GyroPoolMath._SQRT_1E_NEG_5;
             if (input <= 100000000000000n) return 10n ** 16n;
-            if (input <= 1000000000000000n) return this._SQRT_1E_NEG_3;
+            if (input <= 1000000000000000n) return GyroPoolMath._SQRT_1E_NEG_3;
             if (input <= 10000000000000000n) return 10n ** 17n;
-            if (input <= 100000000000000000n) return this._SQRT_1E_NEG_1;
+            if (input <= 100000000000000000n) return GyroPoolMath._SQRT_1E_NEG_1;
             return input;
         }
     }
