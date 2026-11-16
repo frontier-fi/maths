@@ -1,5 +1,13 @@
 # @frontier-fi/maths
 
+## 0.2.1
+
+### Patch Changes
+
+- 74cbb60: `MathSol` divisions (`divUp`, `divDownFixed`, `divUpFixed`, `mulDivUpFixed`) throw a `RangeError` on a zero denominator for any numerator, matching the onchain reverts, instead of returning `0n`.
+- 8b1bb90: `MathSol.divUpFixed` works again as a detached function value (for example as a `FixedPointFunction` callback). This also fixes the Gyro2CLP invariant rounded up, which threw a `TypeError`.
+- 6f6406b: The static `GyroECLPMath` methods no longer depend on `this`, so they work as detached function values (as `MathSol` does). The same applies to the internal `SignedFixedPoint` and `GyroPoolMath` helpers.
+
 ## 0.2.0
 
 ### Minor Changes
